@@ -1,4 +1,94 @@
+/* Base */
 * { box-sizing: border-box }
 html, body { margin: 0; padding: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial }
+body { font-size: 14px; color: #171717; background: #fafafa }
+
+/* Headings */
+h1 { font-size: 1.25rem; margin: 0.25rem 0 0.75rem }
+h2 { font-size: 1.125rem; margin: 0.5rem 0 }
+h3 { font-size: 1rem; margin: 0.5rem 0 }
+
+/* Links & buttons */
 a { color: inherit; text-decoration: none }
 button { cursor: pointer }
+
+/* Light borders & cards */
+.border { border: 1px solid #e5e5e5 }
+.rounded-xl { border-radius: 12px }
+.rounded-2xl { border-radius: 16px }
+.rounded-md { border-radius: 8px }
+.bg-white { background: #fff }
+.bg-neutral-50 { background: #fafafa }
+.bg-neutral-200 { background: #e5e5e5 }
+.text-neutral-900 { color: #171717 }
+.opacity-70 { opacity: .7 }
+.opacity-60 { opacity: .6 }
+.hover\:shadow:hover { box-shadow: 0 6px 24px rgba(0,0,0,.06) }
+
+/* Layout widths & spacing (downsized) */
+.max-w-5xl { max-width: 900px; }             /* tighter than Tailwind’s 64rem */
+.mx-auto { margin-left: auto; margin-right: auto }
+.px-4 { padding-left: 12px; padding-right: 12px }
+.py-3 { padding-top: 8px; padding-bottom: 8px }
+.py-6 { padding-top: 16px; padding-bottom: 16px }
+.p-3 { padding: 12px }
+.p-4 { padding: 16px }
+.mt-2 { margin-top: 8px }
+.mt-3 { margin-top: 12px }
+.mb-2 { margin-bottom: 8px }
+.gap-2 { gap: 8px }
+.gap-3 { gap: 12px }
+.gap-4 { gap: 12px }
+.gap-6 { gap: 16px }
+
+/* Simple grid / flex used in the app */
+.grid { display: grid }
+.flex { display: flex }
+.flex-1 { flex: 1 1 auto }
+.items-center { align-items: center }
+.items-start { align-items: flex-start }
+.justify-between { justify-content: space-between }
+
+/* Grid columns with fewer/lighter gaps on small screens */
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 800px) { .md\:grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .sm\:grid-cols-2, .md\:grid-cols-3 { grid-template-columns: 1fr; }
+}
+
+/* Width/height helpers (downsized) */
+.w-40 { width: 140px } .h-40 { height: 140px }
+.w-24 { width: 56px }  .h-24 { height: 56px }
+.w-20 { width: 48px }  .h-20 { height: 48px }
+
+/* Header effects used in layout */
+.sticky { position: sticky } .top-0 { top: 0 } .z-10 { z-index: 10 }
+.bg-white\/70 { background: rgba(255,255,255,.7) }
+.backdrop-blur { backdrop-filter: saturate(180%) blur(8px) }
+
+/* Utilities used in markup */
+.text-2xl { font-size: 1.25rem; }
+.text-3xl { font-size: 1.5rem; }
+.font-semibold { font-weight: 600 }
+.font-bold { font-weight: 700 }
+.font-extrabold { font-weight: 800 }
+.leading-tight { line-height: 1.2 }
+
+/* Simple badges/buttons */
+.inline-block { display: inline-block }
+.text-xs { font-size: 12px }
+.text-sm { font-size: 13px }
+.px-2 { padding-left: 8px; padding-right: 8px }
+.py-1 { padding-top: 4px; padding-bottom: 4px }
+.px-3 { padding-left: 10px; padding-right: 10px }
+.py-2 { padding-top: 6px; padding-bottom: 6px }
+.rounded-full { border-radius: 999px }
+.bg-green-100 { background: #e6f6ec } .text-green-700 { color: #18794e }
+.bg-neutral-900 { background: #171717; color: #fff }
+
+/* Form bits */
+input[type="number"], input[type="text"] {
+  font: inherit; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 8px;
+}
