@@ -11,14 +11,14 @@ export async function POST(req: Request) {
       return Response.json({ error: "Invalid input" }, { status: 400 });
     }
 
-    // Create a throwaway guest user so we satisfy the userId FK.
+    // Create a throwaway guest user to satisfy FK
     const guestEmail = `${crypto.randomUUID()}@guest.local`;
     const user = await prisma.user.create({
       data: { id: crypto.randomUUID(), email: guestEmail, name: "Guest" },
       select: { id: true },
     });
 
-    const rating = await prisma.audienceRating.create({
+    await prisma.audienceRating.create({
       data: {
         id: crypto.randomUUID(),
         releaseId,
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return Response.json({ ok: true, rating });
+    return Response.json({ ok: true });
   } catch (e: any) {
     return Response.json({ error: e?.message || "Server error" }, { status: 500 });
   }
