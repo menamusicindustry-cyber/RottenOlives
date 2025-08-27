@@ -1,36 +1,53 @@
-import { prisma } from '@/lib/prisma';
-import Image from 'next/image';
-import ScoreDial from '@/components/ScoreDial';
+import { prisma } from "@/lib/prisma";
 
 export default async function Home({ searchParams }: { searchParams: { region?: string }}) {
   const region = searchParams?.region;
   const releases = await prisma.release.findMany({
-    where: region === 'mena' ? { isMena: true } : undefined,
+    where: region === "mena" ? { isMena: true } : undefined,
     include: { artist: true, scores: true },
-    take: 20,
-    orderBy: { releaseDate: 'desc' }
+    take: 24,
+    orderBy: [{ releaseDate: "desc" }, { title: "asc" }],
   });
 
   return (
-    <div className="grid gap-4">
-      <h1 className="text-2xl font-semibold">New Releases {region === 'mena' ? '(MENA)' : ''}</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {releases.map(r => (
-          <a key={r.id} href={`/releases/${r.id}`} className="bg-white border rounded-xl p-3 hover:shadow">
-            <div className="flex gap-3">
-              <div className="w-20 h-20 bg-neutral-200 rounded-md overflow-hidden">
-                {r.coverUrl && <Image src={r.coverUrl} alt={r.title} width={80} height={80}/>}
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold">{r.title}</div>
-                <div className="text-sm opacity-70">{r.artist.name}</div>
-                <div className="mt-2 flex gap-4">
-                  <ScoreDial label="Audience" value={r.scores?.audienceScore ?? undefined} />
+    <div className="section">
+      <h1>New Releases {region === "mena" ? "(MENA)" : ""}</h1>
+      <div className="grid">
+        {releases.map((r) => (
+          <a key={r.id} href={`/releases/${r.id}`} className="card col">
+            <div className="tile">
+              <div className="cover" />
+              <div style={{ flex: 1 }}>
+                <div className="title">{r.title}</div>
+                <div className="meta">{r.artist.name}</div>
+                <div style={{ marginTop: 8, display: "flex", gap: 12, alignItems: "center" }}>
+                  <div className="dial">
+                    <svg viewBox="0 0 36 36" className="dial__svg">
+                      <path
+                        d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"
+                        fill="none" strokeWidth="3" stroke="currentColor" opacity=".2"
+                      />
+                      <path
+                        d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"
+                        fill="none" strokeWidth="3" strokeLinecap="round" stroke="currentColor"
+                        strokeDasharray={`${Math.max(0, Math.min(100, r.scores?.audienceScore ?? 0))}, 100`}
+                      />
+                    </svg>
+                    <div className="dial__value">
+                      {Math.round(r.scores?.audienceScore ?? 0)}
+                    </div>
+                  </div>
+                  <span className="meta">Audience score</span>
                 </div>
               </div>
             </div>
           </a>
         ))}
+        {releases.length === 0 && (
+          <div className="card col">
+            <div className="meta">No releases yet. Add some in Supabase or via seed.</div>
+          </div>
+        )}
       </div>
     </div>
   );
