@@ -1,7 +1,8 @@
 import React from "react";
 import "./globals.css";
 
-// Make the whole app dynamic (no static pre-render at build time)
+// force runtime + dynamic
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
