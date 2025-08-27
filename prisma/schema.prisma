@@ -1,0 +1,45 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+model User { id String @id @default(cuid()) email String @unique name String? createdAt DateTime @default(now()) ratings AudienceRating[] }
+
+model Artist { id String @id @default(cuid()) name String country String? releases Release[] }
+
+model Release {
+  id String @id @default(cuid())
+  artist Artist @relation(fields:[artistId], references:[id])
+  artistId String
+  title String
+  type ReleaseType
+  releaseDate DateTime?
+  label String?
+  coverUrl String?
+  isMena Boolean @default(false)
+  genres ReleaseGenre[]
+  audience AudienceRating[]
+  scores ReleaseScore?
+}
+
+enum ReleaseType { ALBUM EP SINGLE }
+
+model Genre { id Int @id @default(autoincrement()) name String @unique releases ReleaseGenre[] }
+model ReleaseGenre { release Release @relation(fields:[releaseId], references:[id]); releaseId String; genre Genre @relation(fields:[genreId], references:[id]); genreId Int; @@id([releaseId, genreId]) }
+
+model AudienceRating {
+  id String @id @default(cuid())
+  release Release @relation(fields:[releaseId], references:[id])
+  releaseId String
+  user User @relation(fields:[userId], references:[id])
+  userId String
+  stars Int
+  comment String?
+  createdAt DateTime @default(now())
+  ipHash String?
+  subnetHash String?
+  ipVersion Int?
+  @@unique([releaseId, userId])
+  @@unique([releaseId, ipHash])
+  @@index([subnetHash, createdAt])
+}
+
+model ReleaseScore { release Release @relation(fields:[releaseId], references:[id]); releaseId String @id audienceScore Float? audienceCount Int @default(0) lastCalculated DateTime @default(now()) }
