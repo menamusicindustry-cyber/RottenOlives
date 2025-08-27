@@ -1,6 +1,10 @@
 import React from "react";
 import "./globals.css";
 
+// Make the whole app dynamic (no static pre-render at build time)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Rotten Olives",
   description: "Community music reviews (MENA-friendly)",
