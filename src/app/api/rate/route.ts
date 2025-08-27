@@ -12,18 +12,12 @@ export async function POST(req: Request) {
     }
 
     // Create a throwaway guest user so we satisfy the userId FK.
-    // We generate a random email to satisfy the unique(email) constraint.
     const guestEmail = `${crypto.randomUUID()}@guest.local`;
     const user = await prisma.user.create({
-      data: {
-        id: crypto.randomUUID(),
-        email: guestEmail,
-        name: "Guest",
-      },
+      data: { id: crypto.randomUUID(), email: guestEmail, name: "Guest" },
       select: { id: true },
     });
 
-    // Store the rating (no IP / no auth restrictions)
     const rating = await prisma.audienceRating.create({
       data: {
         id: crypto.randomUUID(),
@@ -31,11 +25,9 @@ export async function POST(req: Request) {
         userId: user.id,
         stars: nStars,
         comment: comment ?? null,
-        // leave ipHash/subnetHash/ipVersion NULL
       },
     });
 
-    // Recalculate audience average (0–100) and count
     const agg = await prisma.audienceRating.aggregate({
       where: { releaseId },
       _avg: { stars: true },
