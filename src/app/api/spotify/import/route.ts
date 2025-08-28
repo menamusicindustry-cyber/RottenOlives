@@ -1,3 +1,4 @@
+// src/app/api/spotify/import/route.ts
 import { prisma } from "@/lib/prisma";
 import { getSpotifyToken } from "@/lib/spotify";
 
@@ -25,6 +26,25 @@ async function fetchPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> 
   return out;
 }
 
+// cache artists we’ve already seen during a single import
+const artistCache = new Map<string, { id: string; name: string }>();
+
+async function getOrCreateArtistByName(name: string) {
+  const key = name.toLowerCase().trim();
+  const cached = artistCache.get(key);
+  if (cached) return cached;
+
+  // try find existing (name is NOT unique in schema, so use findFirst)
+  let artist = await prisma.artist.findFirst({ where: { name } });
+  if (!artist) {
+    artist = await prisma.artist.create({
+      data: { id: crypto.randomUUID(), name },
+    });
+  }
+  artistCache.set(key, { id: artist.id, name: artist.name });
+  return artist;
+}
+
 export async function POST(req: Request) {
   try {
     const { playlistId, isMena } = await req.json();
@@ -41,21 +61,17 @@ export async function POST(req: Request) {
         const artistName = t.artists?.[0]?.name?.trim();
         if (!title || !spotifyTrackId || !artistName) continue;
 
-        // 1) upsert artist by name
-        const artist = await prisma.artist.upsert({
-          where: { name: artistName },
-          update: {},
-          create: { id: crypto.randomUUID(), name: artistName },
-        });
+        // 1) find-or-create artist by NAME
+        const artist = await getOrCreateArtistByName(artistName);
 
-        // 2) upsert release by spotifyTrackId (UNIQUE → no duplicates)
+        // 2) upsert release by spotifyTrackId (must be UNIQUE in DB)
         const coverUrl = t.album?.images?.[0]?.url || null;
         const rd = t.album?.release_date ? new Date(t.album.release_date) : null;
         const albumType = (t.album?.album_type || "single").toUpperCase();
         const type = (["ALBUM", "EP", "SINGLE"].includes(albumType) ? albumType : "SINGLE") as any;
 
         const r = await prisma.release.upsert({
-          where: { spotifyTrackId },
+          where: { spotifyTrackId }, // requires a UNIQUE index/field in your DB
           update: {
             artistId: artist.id,
             title,
@@ -77,7 +93,7 @@ export async function POST(req: Request) {
           },
         });
 
-        // simple inserted/updated heuristic
+        // simple inserted/updated heuristic (ignore types here)
         // @ts-ignore
         if ((r as any).createdAt && (r as any).createdAt === (r as any).updatedAt) inserted++; else updated++;
       } catch (e: any) {
@@ -91,8 +107,7 @@ export async function POST(req: Request) {
   }
 }
 
-// Convenience GET so you can test in the browser:
-// /api/spotify/import?playlistId=...&isMena=true
+// Optional: GET for quick testing in a browser
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const playlistId = url.searchParams.get("playlistId");
