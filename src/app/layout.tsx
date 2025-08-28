@@ -22,10 +22,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Image
                 src="/rotten-olives-logo.png"  // must be in public/ to work
                 alt="Rotten Olives"
-                width={180}
-                height={72}
+                width={280}
+                height={112}
                 priority
               />
+                <span className="brand__subtitle">
+      Brought to you by the idiots at{" "}
+      <a
+        href="https://instagram.com/menamusicindustry"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        menamusicindustry
+      </a>
             </Link>
             <nav className="nav">
               <Link href="/?region=mena">MENA</Link>
