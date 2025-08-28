@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 height={112}
                 priority
               />
-                <span className="brand__subtitle">
+         <span className="brand__subtitle">
       Brought to you by the idiots at{" "}
       <a
         href="https://instagram.com/menamusicindustry"
@@ -35,7 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         menamusicindustry
       </a>
-            </Link>
+    </span>
+  </div>
+</Link>
             <nav className="nav">
               <Link href="/?region=mena">MENA</Link>
               <Link href="/about">About</Link>
