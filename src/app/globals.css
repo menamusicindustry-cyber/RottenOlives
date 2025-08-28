@@ -152,12 +152,43 @@ input:focus, textarea:focus, select:focus {
   flex-direction: column;
   align-items: center;
 }
+/* Logo sizing — toned down */
 .brand__logo {
-  /* ensure it’s prominent on mobile but never overflows */
-  max-width: min(92vw, 520px);
+  max-width: min(70vw, 320px);  /* smaller on mobile */
   height: auto;
   display: block;
 }
+
+@media (min-width: 768px) {
+  .brand__logo {
+    max-width: 260px;           /* reasonable size on desktop */
+  }
+}
+
+
+/* Song cover placeholder (for releases) */
+.song-cover {
+  width: 100%;
+  aspect-ratio: 1 / 1;                 /* square shape */
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b1b1b, #0f0f0f);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* When you have an actual image */
+.song-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
 .brand__subtitle {
   font-size: clamp(0.85rem, 1.6vw, 0.95rem);
   color: var(--text-dim);
