@@ -74,6 +74,40 @@ button{ cursor: pointer }
 .nav a{ padding: 6px 10px; border-radius: 999px; border:1px solid transparent; color: var(--muted) }
 .nav a:hover{ border-color: var(--border); color: var(--text) }
 
+/* keep your existing styles; add/adjust these */
+.header {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  background: #0f0f0f;           /* looks great with the green logo; tweak as you like */
+}
+
+.header__row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand :where(img, svg) {
+  display: block;
+  height: 56px;                  /* controls visual size; adjust to taste */
+  width: auto;
+}
+
+.nav {
+  margin-left: auto;
+  display: flex;
+  gap: 14px;
+}
+
+.nav a {
+  color: #ddd;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav a:hover { color: #fff; }
+
+
 /* Grid cards */
 .grid{
   display:grid; gap: var(--gap-3);
