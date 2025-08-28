@@ -1,4 +1,6 @@
 import React from "react";
+import Image from "next/image";
+import Link from "next/link";
 import "./globals.css";
 
 // force runtime + dynamic
@@ -17,10 +19,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="header">
           <div className="container header__row">
-            <a href="/" className="brand">Rotten Olives</a>
+            <Link href="/" className="brand" aria-label="Rotten Olives home">
+              <Image
+                src="/rotten-olives-logo.png"   // put file in /public
+                alt="Rotten Olives"
+                width={180}
+                height={72}
+                priority
+              />
+            </Link>
             <nav className="nav">
-              <a href="/?region=mena">MENA</a>
-              <a href="/about">About</a>
+              <Link href="/?region=mena">MENA</Link>
+              <Link href="/about">About</Link>
             </nav>
           </div>
         </header>
