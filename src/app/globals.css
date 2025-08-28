@@ -87,6 +87,42 @@ button{ cursor: pointer }
   gap: 16px;
 }
 
+.header__row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* center logo + subtitle */
+  text-align: center;
+}
+
+.brand__subtitle {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-top: 6px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+.brand__subtitle a {
+  color: #7fd37f; /* olive-ish green; tweak */
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.brand__subtitle a:hover { text-decoration: underline; }
+
+.nav {
+  margin-left: auto;
+  display: flex;
+  gap: 14px;
+}
+
+
 .brand :where(img, svg) {
   display: block;
   height: 56px;                  /* controls visual size; adjust to taste */
