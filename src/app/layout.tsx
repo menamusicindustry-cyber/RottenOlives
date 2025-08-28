@@ -18,15 +18,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="header">
           <div className="container header__row">
-            {/* Brand block: logo (clickable) + subtitle (not a link wrapper) */}
             <div className="brand">
               <Link href="/" aria-label="Rotten Olives home">
                 <Image
-                  src="/rotten-olives-logo.png" // must live in /public
+                  src="/rotten-olives-logo.png"
                   alt="Rotten Olives"
-                  width={280}
-                  height={112}
+                  width={320}   // ⬅️ bigger by default
+                  height={128}
                   priority
+                  className="brand__logo"
                 />
               </Link>
 
