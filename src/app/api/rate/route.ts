@@ -4,32 +4,34 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const { releaseId, stars, comment, name } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { releaseId, stars, comment, name } = body || {};
+
+    // DEBUG: see exactly what the page sent
+    console.log("RATE body:", body);
 
     const nStars = Number(stars);
     if (!releaseId || !Number.isFinite(nStars) || nStars < 1 || nStars > 10) {
       return Response.json({ error: "Invalid input" }, { status: 400 });
     }
 
-    // Clean up the optional display name
     const displayName =
-      typeof name === "string"
-        ? name.trim().slice(0, 40) // max 40 chars
-        : null;
+      typeof name === "string" && name.trim()
+        ? name.trim().slice(0, 40)
+        : "Guest";
 
-    // Create a throwaway guest user (unique email) and store the chosen name
+    // Create a one-off user carrying the chosen display name
     const guestEmail = `${crypto.randomUUID()}@guest.local`;
     const user = await prisma.user.create({
       data: {
         id: crypto.randomUUID(),
         email: guestEmail,
-        name: displayName || "Guest",
+        name: displayName, // <— THIS is what will show
       },
-      select: { id: true },
+      select: { id: true, name: true, email: true },
     });
 
-    // Store rating
-    await prisma.audienceRating.create({
+    const rating = await prisma.audienceRating.create({
       data: {
         id: crypto.randomUUID(),
         releaseId,
@@ -37,9 +39,10 @@ export async function POST(req: Request) {
         stars: nStars,
         comment: comment ?? null,
       },
+      include: { user: true },
     });
 
-    // Recalculate score
+    // Update aggregate score
     const agg = await prisma.audienceRating.aggregate({
       where: { releaseId },
       _avg: { stars: true },
@@ -61,7 +64,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, rating, user });
   } catch (e: any) {
     return Response.json({ error: e?.message || "Server error" }, { status: 500 });
   }
