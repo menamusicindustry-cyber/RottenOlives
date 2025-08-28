@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   const { playlistId, isMena } = await req.json().catch(() => ({}));
   if (!playlistId) return NextResponse.json({ ok: false, error: "playlistId required" }, { status: 400 });
 
-  // call internal import without needing NEXT_PUBLIC_BASE_URL
+  // call internal Spotify import
   const base = new URL(req.url);
   base.pathname = "/api/spotify/import";
   base.search = "";
