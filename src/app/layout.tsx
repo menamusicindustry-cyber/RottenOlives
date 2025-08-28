@@ -42,6 +42,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
             </div>
 
+            <form action="/" method="GET" className="search">
+  <input
+    type="text"
+    name="q"
+    placeholder="Search artists or songs…"
+    aria-label="Search"
+  />
+</form>
+
+
             <nav className="nav">
               <Link href="/?region=mena">MENA</Link>
               <Link href="/about">About</Link>
