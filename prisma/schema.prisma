@@ -35,6 +35,7 @@ model Release {
   genres      ReleaseGenre[]
   audience    AudienceRating[]
   scores      ReleaseScore?
+  spotifyTrackId String? @unique
 }
 
 enum ReleaseType {
