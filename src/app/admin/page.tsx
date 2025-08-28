@@ -43,7 +43,7 @@ export default function AdminPage() {
         <input type="password" className="input" placeholder="Paste ADMIN_KEY" value={adminKey} onChange={(e) => setAdminKey(e.target.value)} required />
 
         <label className="meta">Spotify Playlist ID</label>
-        <input type="text" className="input" placeholder="e.g., 37i9dQZEVXb..." value={playlistId} onChange={(e) => setPlaylistId(e.target.value.trim())} required />
+        <input type="text" className="input" placeholder="e.g. 37i9dQZEVXb..." value={playlistId} onChange={(e) => setPlaylistId(e.target.value.trim())} required />
 
         <label className="meta">
           <input type="checkbox" checked={isMena} onChange={(e) => setIsMena(e.target.checked)} /> mark as MENA
