@@ -18,26 +18,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="header">
           <div className="container header__row">
-            <Link href="/" className="brand" aria-label="Rotten Olives home">
-              <Image
-                src="/rotten-olives-logo.png"  // must be in public/ to work
-                alt="Rotten Olives"
-                width={280}
-                height={112}
-                priority
-              />
-         <span className="brand__subtitle">
-      Brought to you by the idiots at{" "}
-      <a
-        href="https://instagram.com/menamusicindustry"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        menamusicindustry
-      </a>
-    </span>
-  </div>
-</Link>
+            {/* Brand block: logo (clickable) + subtitle (not a link wrapper) */}
+            <div className="brand">
+              <Link href="/" aria-label="Rotten Olives home">
+                <Image
+                  src="/rotten-olives-logo.png" // must live in /public
+                  alt="Rotten Olives"
+                  width={280}
+                  height={112}
+                  priority
+                />
+              </Link>
+
+              <span className="brand__subtitle">
+                Brought to you by the idiots at{" "}
+                <a
+                  href="https://instagram.com/menamusicindustry"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  menamusicindustry
+                </a>
+              </span>
+            </div>
+
             <nav className="nav">
               <Link href="/?region=mena">MENA</Link>
               <Link href="/about">About</Link>
