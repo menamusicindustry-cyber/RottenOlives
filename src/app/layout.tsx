@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 
-// force runtime + dynamic
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="container header__row">
             <Link href="/" className="brand" aria-label="Rotten Olives home">
               <Image
-                src="/rotten-olives-logo.png"   // put file in /public
+                src="/rotten-olives-logo.png"  // must be in public/ to work
                 alt="Rotten Olives"
                 width={180}
                 height={72}
