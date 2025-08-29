@@ -14,8 +14,9 @@ type PreviewItem = {
 };
 
 export default function AdminPage() {
-  const [authed, setAuthed] = useState<boolean>(false);
+  const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState("");
+
   const [playlistId, setPlaylistId] = useState("3cEYpjA9oz9GiPac4AsH4n");
   const [market, setMarket] = useState("US");
   const [loading, setLoading] = useState<"login" | "preview" | "import" | null>(null);
@@ -23,17 +24,13 @@ export default function AdminPage() {
   const [preview, setPreview] = useState<{ name?: string; total?: number; items: PreviewItem[] } | null>(null);
   const [importResult, setImportResult] = useState<{ imported: number; items: { releaseId: string; title: string; artist: string }[] } | null>(null);
 
-  // Logs
   const [logs, setLogs] = useState<string[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
-  function log(line: string) {
-    setLogs((p) => [...p, `[${new Date().toLocaleTimeString()}] ${line}`]);
-  }
+  function log(line: string) { setLogs((p) => [...p, `[${new Date().toLocaleTimeString()}] ${line}`]); }
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [logs]);
 
   const origin = useMemo(() => (typeof window !== "undefined" ? window.location.origin : ""), []);
 
-  // Check cookie on load
   useEffect(() => {
     (async () => {
       try {
@@ -59,9 +56,7 @@ export default function AdminPage() {
       setPassword("");
     } catch (e: any) {
       setError(String(e?.message || e));
-    } finally {
-      setLoading(null);
-    }
+    } finally { setLoading(null); }
   }
 
   async function doLogout() {
@@ -148,11 +143,7 @@ export default function AdminPage() {
         </form>
       ) : (
         <>
-          <form
-            onSubmit={(e) => { e.preventDefault(); void doPreview(); }}
-            className="card col"
-            style={{ gap: 12, padding: 16 }}
-          >
+          <form onSubmit={(e) => { e.preventDefault(); void doPreview(); }} className="card col" style={{ gap: 12, padding: 16 }}>
             <label className="text-sm font-medium">Playlist ID</label>
             <input
               value={playlistId}
@@ -172,7 +163,6 @@ export default function AdminPage() {
             {error && <div className="text-sm rounded px-3 py-2 bg-red-50 text-red-700">{error}</div>}
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {/* Preview matches Import (green pill) */}
               <button
                 type="submit"
                 disabled={!playlistId || !!loading}
@@ -196,7 +186,6 @@ export default function AdminPage() {
 
           <section className="card" style={{ padding: 0 }}>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) 2fr", gap: 0 }}>
-              {/* Preview panel */}
               <div className="col" style={{ gap: 12, padding: 16, borderRight: "1px solid #eee" }}>
                 <h3 style={{ margin: 0 }}>Preview</h3>
                 {preview ? (
@@ -229,7 +218,6 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Logs panel */}
               <div className="col" style={{ gap: 8, padding: 16 }}>
                 <h3 style={{ margin: 0 }}>Logs</h3>
                 <div
