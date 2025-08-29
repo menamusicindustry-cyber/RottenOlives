@@ -5,7 +5,7 @@ import StarRating from "@/components/StarRating";
 
 type Props = {
   releaseId: string;
-  onSubmitted?: () => void; // optional: refresh callback
+  onSubmitted?: () => void;
 };
 
 export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
@@ -44,30 +44,29 @@ export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="card col" style={{ gap: 14, padding: 16, background: "transparent" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h3 style={{ margin: 0 }}>Rate this release</h3>
-        <div className="meta">1–10 stars</div>
-      </div>
+    <form
+      onSubmit={onSubmit}
+      className="card col"
+      style={{ gap: 14, padding: 16, background: "transparent", maxWidth: 420, margin: "0 auto" }}
+    >
+      <h3 style={{ margin: 0 }}>Rate this release</h3>
 
-      <StarRating value={stars} onChange={setStars} max={10} size={34} color="#10b981" />
+      <StarRating value={stars} onChange={setStars} max={10} size={36} />
 
-      <div className="grid" style={{ gap: 10 }}>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your name (optional)"
-          className="border rounded px-3 py-2"
-        />
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="Write a short comment (optional)"
-          className="border rounded px-3 py-2"
-          rows={3}
-        />
-      </div>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Your name (optional)"
+        className="border rounded px-3 py-2"
+      />
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Write a short comment (optional)"
+        className="border rounded px-3 py-2"
+        rows={3}
+      />
 
       {msg && (
         <div
@@ -82,10 +81,15 @@ export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
       <button
         type="submit"
         disabled={loading || stars < 1 || stars > 10}
-        className="px-4 py-2 rounded text-white disabled:opacity-50"
-        style={{ backgroundColor: "#10b981" }}
+        className="px-4 py-2 text-sm text-white disabled:opacity-50"
+        style={{
+          backgroundColor: "#10b981",
+          borderRadius: "9999px", // pill shape
+          padding: "6px 16px",    // smaller
+          alignSelf: "flex-start",
+        }}
       >
-        {loading ? "Submitting…" : "Submit rating"}
+        {loading ? "Submitting…" : "Submit"}
       </button>
     </form>
   );
