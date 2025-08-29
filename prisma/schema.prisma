@@ -1,88 +1,117 @@
-generator client {
-  provider = "prisma-client-js"
-}
+// prisma/schema.prisma
 
+// ----------
+// Datasource & generator (keep yours)
+// ----------
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  ratings   AudienceRating[]
+generator client {
+  provider = "prisma-client-js"
 }
 
+// ----------
+// Enums
+// ----------
+// If your DB already has an enum, keep its exact members.
+// Example (lowercase):
+enum ReleaseType {
+  single
+  album
+  compilation
+}
+
+// ----------
+// Models
+// ----------
 model Artist {
-  id       String   @id @default(cuid())
-  name     String
-  country  String?
-  releases Release[]
+  id        String   @id          // text in your DB
+  name      String
+  country   String?
+  // Back-relation to Release via Release.artistId
+  releases  Release[]
 }
 
 model Release {
-  id             String      @id
+  id             String       @id          // text in your DB
   artistId       String
+  // Relation to Artist using artistId FK
+  artist         Artist       @relation(fields: [artistId], references: [id])
+
   title          String
-  type          ReleaseType
+  type           ReleaseType
   releaseDate    DateTime?
   label          String?
   coverUrl       String?
-  isMena         Boolean     @default(false)
-  spotifyTrackId String?     @unique   // <- unique key for upsert, allow NULL for non-Spotify entries
+  isMena         Boolean      @default(false)
+
+  // Unique key we decided to use for upserts
+  spotifyTrackId String?      @unique
+
+  // Back-relations to children that reference releaseId
+  genres         ReleaseGenre[]
+  ratings        AudienceRating[]
+  score          ReleaseScore?
 
   @@index([artistId])
-  // Remove this if it exists:
+  // Remove this if it exists in your current file:
   // @@unique([artistId, title])
 }
 
-enum ReleaseType {
-  ALBUM
-  EP
-  SINGLE
-}
-
 model Genre {
-  id       Int            @id @default(autoincrement())
-  name     String         @unique
+  id      Int            @id @default(autoincrement())
+  name    String
+  // Back-relation for the join table
   releases ReleaseGenre[]
 }
 
 model ReleaseGenre {
-  release   Release @relation(fields: [releaseId], references: [id])
+  // FK to Release
   releaseId String
-  genre     Genre   @relation(fields: [genreId], references: [id])
-  genreId   Int
+  release   Release   @relation(fields: [releaseId], references: [id])
 
+  // FK to Genre
+  genreId   Int
+  genre     Genre     @relation(fields: [genreId], references: [id])
+
+  // Composite PK for the join table
   @@id([releaseId, genreId])
 }
 
 model AudienceRating {
-  id         String   @id @default(cuid())
-  release    Release  @relation(fields: [releaseId], references: [id])
-  releaseId  String
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String
-  stars      Int
-  comment    String?
-  createdAt  DateTime @default(now())
+  id          String    @id @default(cuid())  // you already had cuid() in logs
+  // FK to Release
+  releaseId   String
+  release     Release   @relation(fields: [releaseId], references: [id])
 
-  // Hashed network controls
-  ipHash     String?  // sha256(ip + salt)
-  subnetHash String?  // sha256(ipv4 /24 or ipv6 /64 + salt)
-  ipVersion  Int?     // 4 or 6
-
-  @@unique([releaseId, userId])      // one per user per release
-  @@unique([releaseId, ipHash])      // one per IP per release
-  @@index([subnetHash, createdAt])   // burst detection
+  userId      String
+  stars       Int
+  comment     String?
+  createdAt   DateTime  @default(now())
+  ipHash      String?
+  subnetHash  String?
+  ipVersion   Int?
 }
 
 model ReleaseScore {
-  release        Release  @relation(fields: [releaseId], references: [id])
+  // One-to-one with Release via releaseId as PK & FK
   releaseId      String   @id
+  release        Release  @relation(fields: [releaseId], references: [id])
+
   audienceScore  Float?
   audienceCount  Int      @default(0)
   lastCalculated DateTime @default(now())
+}
+
+model User {
+  id        String   @id
+  email     String
+  name      String?
+  createdAt DateTime @default(now())
+
+  // Optional: back-relation if you ever tie ratings to users via userId as FK.
+  // (Only add if you actually enforce FK userId -> User.id in DB)
+  // ratings  AudienceRating[]
 }
