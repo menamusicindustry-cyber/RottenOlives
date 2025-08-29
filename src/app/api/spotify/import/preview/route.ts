@@ -1,17 +1,26 @@
-// src/app/api/spotify/import/preview/route.ts
+import { cookies } from "next/headers";
 import { spotifyFetch } from "@/lib/spotify";
 export const runtime = "nodejs";
+
+function requireAdmin() {
+  if (cookies().get("admin")?.value !== "1") {
+    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), { status: 401 });
+  }
+  return null;
+}
 
 function normalize(item: any) {
   const t = item.track ?? item;
   if (!t || t.is_local) return null;
   const album = t.album;
-  const primary = (t.artists ?? [])[0];
+  const artists = t.artists ?? [];
+  const primaryArtist = artists[0];
+
   return {
     spotifyTrackId: t.id,
     title: t.name,
-    artistSpotifyId: primary?.id || null,
-    artistName: primary?.name || "Unknown Artist",
+    artistSpotifyId: primaryArtist?.id || null,
+    artistName: primaryArtist?.name || "Unknown Artist",
     albumType: album?.album_type || null,
     releaseDate: album?.release_date || null,
     coverUrl: album?.images?.[0]?.url || null,
@@ -20,6 +29,9 @@ function normalize(item: any) {
 }
 
 export async function GET(req: Request) {
+  const guard = requireAdmin();
+  if (guard) return guard;
+
   try {
     const { searchParams } = new URL(req.url);
     const playlistId = searchParams.get("playlistId");
@@ -31,7 +43,6 @@ export async function GET(req: Request) {
     let next = first?.tracks?.next as string | null;
 
     while (next) {
-      // next is a full URL; append market if missing
       const url = next.includes("market=") ? next : `${next}${next.includes("?") ? "&" : "?"}market=${market}`;
       const page = await spotifyFetch(url);
       items.push(...(page?.items ?? []));
