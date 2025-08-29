@@ -35,30 +35,22 @@ model Artist {
 }
 
 model Release {
-  id             String       @id          // text in your DB
+  id             String      @id
   artistId       String
-  // Relation to Artist using artistId FK
-  artist         Artist       @relation(fields: [artistId], references: [id])
-
   title          String
   type           ReleaseType
   releaseDate    DateTime?
   label          String?
   coverUrl       String?
-  isMena         Boolean      @default(false)
+  isMena         Boolean     @default(false)
+  spotifyTrackId String?     @unique   // <- keep this
 
-  // Unique key we decided to use for upserts
-  spotifyTrackId String?      @unique
-
-  // Back-relations to children that reference releaseId
-  genres         ReleaseGenre[]
-  ratings        AudienceRating[]
-  score          ReleaseScore?
+  // Remove this line if present:
+  // @@unique([artistId, title])
 
   @@index([artistId])
-  // Remove this if it exists in your current file:
-  // @@unique([artistId, title])
 }
+
 
 model Genre {
   id      Int            @id @default(autoincrement())
