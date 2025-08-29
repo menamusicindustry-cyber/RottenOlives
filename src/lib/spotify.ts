@@ -1,5 +1,4 @@
 // src/lib/spotify.ts
-// Uses refresh_token to mint user access tokens for Spotify Web API calls.
 let cached: { token: string; expiresAt: number } | null = null;
 
 export async function getSpotifyToken() {
@@ -8,8 +7,7 @@ export async function getSpotifyToken() {
 
   const id = process.env.SPOTIFY_CLIENT_ID!;
   const secret = process.env.SPOTIFY_CLIENT_SECRET!;
-  const refresh = process.env.SPOTIFY_REFRESH_TOKEN!; // <- set in Vercel
-
+  const refresh = process.env.SPOTIFY_REFRESH_TOKEN!;
   if (!id || !secret || !refresh) {
     throw new Error("Missing SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, or SPOTIFY_REFRESH_TOKEN");
   }
@@ -28,18 +26,14 @@ export async function getSpotifyToken() {
   });
 
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(`Spotify refresh failed: ${res.status} ${JSON.stringify(json)}`);
-  }
+  if (!res.ok) throw new Error(`Spotify refresh failed: ${res.status} ${JSON.stringify(json)}`);
 
-  const accessToken = json.access_token as string;
+  const token = json.access_token as string;
   const expiresIn = (json.expires_in as number) ?? 3600;
-
-  cached = { token: accessToken, expiresAt: now + expiresIn };
-  return accessToken;
+  cached = { token, expiresAt: now + expiresIn };
+  return token;
 }
 
-/** Convenience helper for calling Spotify Web API with auth */
 export async function spotifyFetch(path: string) {
   const token = await getSpotifyToken();
   const url = path.startsWith("http")
