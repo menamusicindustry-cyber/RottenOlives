@@ -47,7 +47,7 @@ export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
     <form
       onSubmit={onSubmit}
       className="card col"
-      style={{ gap: 14, padding: 16, background: "transparent", maxWidth: 420, margin: "0 auto" }}
+      style={{ gap: 14, padding: 16, background: "transparent" }}
     >
       <h3 style={{ margin: 0 }}>Rate this release</h3>
 
@@ -81,15 +81,15 @@ export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
       <button
         type="submit"
         disabled={loading || stars < 1 || stars > 10}
-        className="px-4 py-2 text-sm text-white disabled:opacity-50"
+        className="px-5 py-2 rounded-full disabled:opacity-50"
         style={{
           backgroundColor: "#10b981",
-          borderRadius: "9999px", // pill shape
-          padding: "6px 16px",    // smaller
           alignSelf: "flex-start",
         }}
       >
-        {loading ? "Submitting…" : "Submit"}
+        <span style={{ color: "white", fontWeight: 700 }}>
+          {loading ? "Submitting…" : "Submit"}
+        </span>
       </button>
     </form>
   );
