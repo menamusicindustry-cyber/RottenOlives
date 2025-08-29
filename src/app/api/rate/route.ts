@@ -52,13 +52,13 @@ export async function POST(req: Request) {
     await prisma.releaseScore.upsert({
       where: { releaseId },
       update: {
-        audienceScore: (agg._avg.stars || 0) * 10,
+        audienceScore: agg._avg.stars || 0,
         audienceCount: agg._count._all,
         lastCalculated: new Date(),
       },
       create: {
         releaseId,
-        audienceScore: (agg._avg.stars || 0) * 10,
+        audienceScore: agg._avg.stars || 0,
         audienceCount: agg._count._all,
         lastCalculated: new Date(),
       },
