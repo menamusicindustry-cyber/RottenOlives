@@ -1,61 +1,59 @@
+// app/admin/page.tsx  (keep your styling, just the handler)
 "use client";
 import { useState } from "react";
 
 export default function AdminPage() {
-  const [playlistId, setPlaylistId] = useState("");
-  const [isMena, setIsMena] = useState(true);
-  const [adminKey, setAdminKey] = useState("");
+  const [password, setPassword] = useState("");
+  const [playlistInput, setPlaylistInput] = useState("");
+  const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [resp, setResp] = useState<any>(null);
-  const [err, setErr] = useState<string | null>(null);
 
-  async function runImport(e: React.FormEvent) {
+  async function onImport(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true); setErr(null); setResp(null);
-    try {
-      const res = await fetch("/api/admin/import", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
-        body: JSON.stringify({ playlistId, isMena }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Import failed");
-      setResp(json);
-    } catch (e: any) {
-      setErr(e?.message || "Import failed");
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    setResult(null);
+
+    const res = await fetch("/api/admin/import-playlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password, playlistInput }),
+    });
+
+    const data = await res.json();
+    setResult({ ok: res.ok, ...data });
+    setLoading(false);
   }
 
   return (
-    <div className="section container" style={{ display: "grid", gap: 16 }}>
-      <div className="card">
-        <h1 style={{ margin: 0 }}>Admin: Import Releases</h1>
-        <div className="meta">Paste a Spotify <b>playlist ID</b> and click Run.</div>
-      </div>
-
-      <form className="card form-row" onSubmit={runImport}>
-        <label className="meta">Admin Key</label>
-        <input type="password" className="input" placeholder="Paste ADMIN_KEY" value={adminKey} onChange={(e) => setAdminKey(e.target.value)} required />
-
-        <label className="meta">Spotify Playlist ID</label>
-        <input type="text" className="input" placeholder="e.g. 37i9dQZEVXb..." value={playlistId} onChange={(e) => setPlaylistId(e.target.value.trim())} required />
-
-        <label className="meta">
-          <input type="checkbox" checked={isMena} onChange={(e) => setIsMena(e.target.checked)} /> mark as MENA
-        </label>
-
-        <button className="btn btn--primary" type="submit" disabled={loading}>
-          {loading ? "Running…" : "Run Import"}
+    <main className="max-w-xl mx-auto p-6 space-y-4">
+      <h1 className="text-2xl font-semibold">Import Releases from Spotify Playlist</h1>
+      <form onSubmit={onImport} className="space-y-3">
+        <input
+          type="password"
+          placeholder="Admin password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full border rounded p-2"
+        />
+        <input
+          placeholder="Playlist URL / URI / ID"
+          value={playlistInput}
+          onChange={(e) => setPlaylistInput(e.target.value)}
+          className="w-full border rounded p-2"
+        />
+        <button
+          disabled={loading}
+          className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
+        >
+          {loading ? "Importing…" : "Import"}
         </button>
       </form>
 
-      {err && <div className="card" style={{ borderColor: "rgba(255,0,0,.3)" }}><div className="meta">Error: {err}</div></div>}
-      {resp && <pre className="card" style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(resp, null, 2)}</pre>}
-    </div>
+      {result && (
+        <pre className="bg-gray-100 p-3 rounded text-sm overflow-auto">
+          {JSON.stringify(result, null, 2)}
+        </pre>
+      )}
+    </main>
   );
 }
