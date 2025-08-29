@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 
+/**
+ * Accessible star rating (1..max). Filled stars are green (#10b981).
+ * Background is transparent; no borders, no box.
+ */
 type StarRatingProps = {
   value: number;                 // 1..max
   onChange: (v: number) => void; // callback
@@ -9,6 +13,7 @@ type StarRatingProps = {
   size?: number;                 // px, default 30
   readOnly?: boolean;            // view-only mode
   className?: string;
+  color?: string;                // hex/rgb, default Tailwind emerald-500 (#10b981)
 };
 
 export default function StarRating({
@@ -18,6 +23,7 @@ export default function StarRating({
   size = 30,
   readOnly = false,
   className = "",
+  color = "#10b981",
 }: StarRatingProps) {
   const [hover, setHover] = useState<number | null>(null);
   const current = hover ?? value ?? 0;
@@ -27,6 +33,7 @@ export default function StarRating({
       className={`flex items-center gap-1 ${className}`}
       role={readOnly ? undefined : "radiogroup"}
       aria-label="Star rating"
+      style={{ background: "transparent" }}
     >
       {Array.from({ length: max }, (_, i) => {
         const n = i + 1;
@@ -47,9 +54,29 @@ export default function StarRating({
             className={`select-none leading-none transition-transform ${
               readOnly ? "cursor-default" : "cursor-pointer hover:scale-110"
             }`}
-            style={{ fontSize: size, lineHeight: 1 }}
+            style={{
+              fontSize: 0,
+              lineHeight: 1,
+              background: "transparent",
+              border: "none",
+              padding: 0,
+            }}
           >
-            {filled ? "★" : "☆"}
+            {/* SVG star so we can style fill/stroke exactly */}
+            <svg
+              width={size}
+              height={size}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              style={{ display: "block" }}
+            >
+              <path
+                d="M12 17.27l-5.4 3.22 1.44-6.19-4.69-4.07 6.24-.53L12 3l2.41 6.7 6.24.53-4.69 4.07 1.44 6.19z"
+                fill={filled ? color : "transparent"}
+                stroke={filled ? color : "currentColor"}
+                strokeWidth="1.5"
+              />
+            </svg>
           </button>
         );
       })}
