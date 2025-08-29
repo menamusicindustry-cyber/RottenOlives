@@ -23,19 +23,19 @@ model Artist {
 }
 
 model Release {
-  id          String   @id @default(cuid())
-  artist      Artist   @relation(fields: [artistId], references: [id])
-  artistId    String
-  title       String
-  type        ReleaseType
-  releaseDate DateTime?
-  label       String?
-  coverUrl    String?
-  isMena      Boolean  @default(false)
-  genres      ReleaseGenre[]
-  audience    AudienceRating[]
-  scores      ReleaseScore?
-  spotifyTrackId String? @unique
+  id             String      @id
+  artistId       String
+  title          String
+  type          ReleaseType
+  releaseDate    DateTime?
+  label          String?
+  coverUrl       String?
+  isMena         Boolean     @default(false)
+  spotifyTrackId String?     @unique   // <- unique key for upsert, allow NULL for non-Spotify entries
+
+  @@index([artistId])
+  // Remove this if it exists:
+  // @@unique([artistId, title])
 }
 
 enum ReleaseType {
