@@ -1,8 +1,6 @@
-// prisma/schema.prisma
-
-// ----------
-// Datasource & generator (keep yours)
-// ----------
+// ---------
+// Datasource & Generator
+// ---------
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -12,88 +10,93 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// ----------
+// ---------
 // Enums
-// ----------
-// If your DB already has an enum, keep its exact members.
-// Example (lowercase):
+// ---------
+// If your DB already has a ReleaseType enum with different members/casing,
+// you can change these names to match. Your import code will still work.
 enum ReleaseType {
   single
   album
   compilation
 }
 
-// ----------
+// ---------
 // Models
-// ----------
+// ---------
+
 model Artist {
-  id        String   @id          // text in your DB
-  name      String
-  country   String?
-  // Back-relation to Release via Release.artistId
-  releases  Release[]
+  id       String   @id                 // text
+  name     String
+  country  String?
+
+  // Back-rel to Release via Release.artistId
+  releases Release[]
 }
 
 model Release {
-  id             String      @id
+  id             String       @id       // text
   artistId       String
+  artist         Artist       @relation(fields: [artistId], references: [id])
+
   title          String
   type           ReleaseType
   releaseDate    DateTime?
   label          String?
   coverUrl       String?
-  isMena         Boolean     @default(false)
-  spotifyTrackId String?     @unique   // <- keep this
+  isMena         Boolean      @default(false)
 
-  // Remove this line if present:
-  // @@unique([artistId, title])
+  // Use this as the only unique for de-duping Spotify imports
+  spotifyTrackId String?      @unique
+
+  // Back-relations to child tables
+  genres         ReleaseGenre[]
+  ratings        AudienceRating[]
+  score          ReleaseScore?
 
   @@index([artistId])
+  // Make sure this is NOT present anymore:
+  // @@unique([artistId, title])
 }
 
-
 model Genre {
-  id      Int            @id @default(autoincrement())
-  name    String
-  // Back-relation for the join table
+  id       Int            @id @default(autoincrement())
+  name     String
   releases ReleaseGenre[]
 }
 
 model ReleaseGenre {
-  // FK to Release
+  // Join table between Release and Genre
   releaseId String
-  release   Release   @relation(fields: [releaseId], references: [id])
+  release   Release @relation(fields: [releaseId], references: [id])
 
-  // FK to Genre
   genreId   Int
-  genre     Genre     @relation(fields: [genreId], references: [id])
+  genre     Genre   @relation(fields: [genreId], references: [id])
 
-  // Composite PK for the join table
   @@id([releaseId, genreId])
 }
 
 model AudienceRating {
-  id          String    @id @default(cuid())  // you already had cuid() in logs
-  // FK to Release
-  releaseId   String
-  release     Release   @relation(fields: [releaseId], references: [id])
+  id         String   @id @default(cuid())
+  releaseId  String
+  release    Release  @relation(fields: [releaseId], references: [id])
 
-  userId      String
-  stars       Int
-  comment     String?
-  createdAt   DateTime  @default(now())
-  ipHash      String?
-  subnetHash  String?
-  ipVersion   Int?
+  userId     String
+  stars      Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  ipHash     String?
+  subnetHash String?
+  ipVersion  Int?
 }
 
 model ReleaseScore {
-  // One-to-one with Release via releaseId as PK & FK
-  releaseId      String   @id
-  release        Release  @relation(fields: [releaseId], references: [id])
+  // One-to-one with Release
+  releaseId      String  @id
+  release        Release @relation(fields: [releaseId], references: [id])
 
   audienceScore  Float?
-  audienceCount  Int      @default(0)
+  audienceCount  Int     @default(0)
   lastCalculated DateTime @default(now())
 }
 
@@ -103,7 +106,6 @@ model User {
   name      String?
   createdAt DateTime @default(now())
 
-  // Optional: back-relation if you ever tie ratings to users via userId as FK.
-  // (Only add if you actually enforce FK userId -> User.id in DB)
-  // ratings  AudienceRating[]
+  // If you later enforce userId as FK in AudienceRating, you can add:
+  // ratings AudienceRating[]
 }
