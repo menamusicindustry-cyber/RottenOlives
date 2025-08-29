@@ -1,50 +1,31 @@
-// src/lib/spotify.ts
-let cached: { token: string; expiresAt: number } | null = null;
-
-export async function getSpotifyToken() {
-  const now = Math.floor(Date.now() / 1000);
-  if (cached && cached.expiresAt - 30 > now) return cached.token;
-
+// lib/spotify.ts
+export async function getAppToken() {
   const id = process.env.SPOTIFY_CLIENT_ID!;
   const secret = process.env.SPOTIFY_CLIENT_SECRET!;
-  const refresh = process.env.SPOTIFY_REFRESH_TOKEN!;
-  if (!id || !secret || !refresh) {
-    throw new Error("Missing SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, or SPOTIFY_REFRESH_TOKEN");
-  }
+  if (!id || !secret) throw new Error("Missing Spotify env vars");
 
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
-      Authorization: "Basic " + Buffer.from(`${id}:${secret}`).toString("base64"),
+      Authorization: "Basic " + Buffer.from(id + ":" + secret).toString("base64"),
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: refresh,
-    }),
+    body: new URLSearchParams({ grant_type: "client_credentials" }),
     cache: "no-store",
   });
-
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`Spotify refresh failed: ${res.status} ${JSON.stringify(json)}`);
-
-  const token = json.access_token as string;
-  const expiresIn = (json.expires_in as number) ?? 3600;
-  cached = { token, expiresAt: now + expiresIn };
-  return token;
+  if (!res.ok) throw new Error(`Token error ${res.status}: ${await res.text()}`);
+  const { access_token } = await res.json();
+  return access_token as string;
 }
 
-export async function spotifyFetch(path: string) {
-  const token = await getSpotifyToken();
-  const url = path.startsWith("http")
-    ? path
-    : `https://api.spotify.com${path.startsWith("/v1") ? "" : "/v1"}${path.startsWith("/") ? path : `/${path}`}`;
-
-  const r = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`Spotify fetch error: ${r.status} ${JSON.stringify(data)}`);
-  return data;
+export function extractPlaylistId(input: string) {
+  if (!input) throw new Error("No playlist input");
+  if (input.startsWith("https://open.spotify.com/playlist/")) {
+    const id = input.split("/playlist/")[1].split("?")[0];
+    return id;
+  }
+  if (input.startsWith("spotify:playlist:")) {
+    return input.split(":").pop()!;
+  }
+  return input; // assume already an ID
 }
