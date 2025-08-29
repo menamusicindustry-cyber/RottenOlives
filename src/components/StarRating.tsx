@@ -3,19 +3,19 @@
 import { useState } from "react";
 
 type StarRatingProps = {
-  value: number;                 // current selected value (1..max)
-  onChange: (v: number) => void; // notify parent
+  value: number;                 // 1..max
+  onChange: (v: number) => void; // callback
   max?: number;                  // default 10
-  size?: number;                 // px size for the stars (defaults ~28)
-  readOnly?: boolean;            // optional view-only mode
-  className?: string;            // optional wrapper classes
+  size?: number;                 // px, default 30
+  readOnly?: boolean;            // view-only mode
+  className?: string;
 };
 
 export default function StarRating({
   value,
   onChange,
   max = 10,
-  size = 28,
+  size = 30,
   readOnly = false,
   className = "",
 }: StarRatingProps) {
@@ -31,7 +31,6 @@ export default function StarRating({
       {Array.from({ length: max }, (_, i) => {
         const n = i + 1;
         const filled = n <= current;
-        const symbol = filled ? "★" : "☆";
         return (
           <button
             key={n}
@@ -45,14 +44,20 @@ export default function StarRating({
             onFocus={() => !readOnly && setHover(n)}
             onBlur={() => !readOnly && setHover(null)}
             onClick={() => !readOnly && onChange(n)}
-            className={`select-none leading-none ${readOnly ? "cursor-default" : "cursor-pointer"}`}
+            className={`select-none leading-none transition-transform ${
+              readOnly ? "cursor-default" : "cursor-pointer hover:scale-110"
+            }`}
             style={{ fontSize: size, lineHeight: 1 }}
           >
-            {symbol}
+            {filled ? "★" : "☆"}
           </button>
         );
       })}
-      {!readOnly && <span className="ml-2 text-sm opacity-70">{current}/{max}</span>}
+      {!readOnly && (
+        <span className="ml-2 text-sm opacity-70 tabular-nums">
+          {current}/{max}
+        </span>
+      )}
     </div>
   );
 }
