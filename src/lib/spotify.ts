@@ -2,8 +2,11 @@
 let _accessToken: string | null = null;
 let _expiresAt = 0;
 
-/** Your existing client-credentials token fetcher */
-export async function fetchToken() {
+/**
+ * Fetches a client-credentials access token from Spotify.
+ * Requires env vars: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
+ */
+async function fetchToken() {
   const id = process.env.SPOTIFY_CLIENT_ID!;
   const secret = process.env.SPOTIFY_CLIENT_SECRET!;
   if (!id || !secret) {
@@ -17,47 +20,23 @@ export async function fetchToken() {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({ grant_type: "client_credentials" }),
+    // don't cache tokens in edge/CDN
     cache: "no-store",
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Spotify token error ${res.status}: ${body}`);
+    const text = await res.text().catch(() => "");
+    throw new Error(`Spotify token error: ${res.status} ${text}`);
   }
 
-  const json = await res.json();
-  _accessToken = json.access_token;
-  _expiresAt = Date.now() + (json.expires_in - 30) * 1000; // 30s safety
+  const j = await res.json();
+  _accessToken = j.access_token as string;
+  // refresh 5 minutes early
+  _expiresAt = Date.now() + Math.max(0, (j.expires_in as number) - 300) * 1000;
   return _accessToken!;
 }
 
-/** Get a valid app token, reusing cached one if not expired */
-export async function getAppToken() {
+/** Returns a cached token if valid; else fetches a new one. */
+export async function getSpotifyToken() {
   if (_accessToken && Date.now() < _expiresAt) return _accessToken;
   return fetchToken();
-}
-
-/** Normalize playlist input: URL / URI / ID → ID */
-export function extractPlaylistId(input: string) {
-  const s = String(input).trim();
-  if (s.startsWith("https://open.spotify.com/playlist/")) {
-    return s.split("/playlist/")[1].split("?")[0];
-  }
-  if (s.startsWith("spotify:playlist:")) return s.split(":").pop()!;
-  return s; // assume already an ID
-}
-
-/** Small helper to hit Spotify with the bearer */
-export async function spotifyGet<T = any>(url: string, token: string): Promise<T> {
-  const r = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (r.status === 429) {
-    const retry = Number(r.headers.get("Retry-After") ?? "1") * 1000;
-    await new Promise((res) => setTimeout(res, retry));
-    return spotifyGet<T>(url, token);
-  }
-  if (!r.ok) throw new Error(`Spotify ${r.status}: ${await r.text()}`);
-  return r.json();
-}
