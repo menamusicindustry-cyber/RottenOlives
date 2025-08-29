@@ -1,117 +1,98 @@
-// src/app/api/spotify/import/route.ts
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { getSpotifyToken } from "@/lib/spotify";
-
+import { spotifyFetch } from "@/lib/spotify";
 export const runtime = "nodejs";
 
-type SpotifyArtist = { id: string; name: string };
-type SpotifyImage = { url: string; width: number; height: number };
-type SpotifyAlbum = { release_date?: string; album_type?: string; images?: SpotifyImage[] };
-type SpotifyTrack = { id: string; name: string; artists: SpotifyArtist[]; album: SpotifyAlbum };
-
-async function fetchPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> {
-  const token = await getSpotifyToken();
-  const out: SpotifyTrack[] = [];
-  let url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(
-    playlistId
-  )}/tracks?limit=100&fields=items(track(id,name,album(release_date,album_type,images),artists(id,name))),next`;
-
-  while (url) {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
-    if (!res.ok) throw new Error(`Spotify fetch error: ${res.status} ${await res.text()}`);
-    const j = await res.json();
-    for (const it of j.items || []) if (it?.track?.id) out.push(it.track);
-    url = j.next || "";
+function requireAdmin() {
+  if (cookies().get("admin")?.value !== "1") {
+    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), { status: 401 });
   }
-  return out;
+  return null;
 }
 
-// cache artists we’ve already seen during a single import
-const artistCache = new Map<string, { id: string; name: string }>();
+const RELEASE_TYPE_MAP = { single: "single", album: "album", compilation: "album" } as const;
+function toReleaseType(albumType?: string | null) {
+  const key = (albumType || "").toLowerCase() as keyof typeof RELEASE_TYPE_MAP;
+  return RELEASE_TYPE_MAP[key] || "single";
+}
 
-async function getOrCreateArtistByName(name: string) {
-  const key = name.toLowerCase().trim();
-  const cached = artistCache.get(key);
-  if (cached) return cached;
+function normalize(item: any) {
+  const t = item.track ?? item;
+  if (!t || t.is_local) return null;
+  const album = t.album;
+  const artists = t.artists ?? [];
+  const primaryArtist = artists[0];
 
-  // try find existing (name is NOT unique in schema, so use findFirst)
-  let artist = await prisma.artist.findFirst({ where: { name } });
-  if (!artist) {
-    artist = await prisma.artist.create({
-      data: { id: crypto.randomUUID(), name },
-    });
-  }
-  artistCache.set(key, { id: artist.id, name: artist.name });
-  return artist;
+  return {
+    spotifyTrackId: t.id as string,
+    title: t.name as string,
+    artistSpotifyId: primaryArtist?.id as string | undefined,
+    artistName: (primaryArtist?.name as string) || "Unknown Artist",
+    albumType: (album?.album_type as string | undefined) || "single",
+    releaseDate: (album?.release_date as string | undefined) || null,
+    coverUrl: (album?.images?.[0]?.url as string | undefined) || null,
+  };
 }
 
 export async function POST(req: Request) {
+  const guard = requireAdmin();
+  if (guard) return guard;
+
   try {
-    const { playlistId, isMena } = await req.json();
-    if (!playlistId) return Response.json({ ok: false, error: "playlistId required" }, { status: 400 });
+    const body = await req.json().catch(() => ({}));
+    const { playlistId, dryRun = false } = body || {};
+    if (!playlistId) return Response.json({ ok: false, error: "Missing playlistId" }, { status: 400 });
 
-    const tracks = await fetchPlaylistTracks(playlistId);
-    let inserted = 0, updated = 0;
-    const problems: string[] = [];
+    const pl = await spotifyFetch(`/v1/playlists/${playlistId}?market=US`);
+    const items = (pl?.tracks?.items ?? []).map(normalize).filter(Boolean) as ReturnType<typeof normalize>[];
 
-    for (const t of tracks) {
-      try {
-        const title = t.name?.trim();
-        const spotifyTrackId = t.id;
-        const artistName = t.artists?.[0]?.name?.trim();
-        if (!title || !spotifyTrackId || !artistName) continue;
+    if (dryRun) return Response.json({ ok: true, previewCount: items.length, items });
 
-        // 1) find-or-create artist by NAME
-        const artist = await getOrCreateArtistByName(artistName);
+    const results: any[] = [];
+    for (const it of items) {
+      // Artist
+      const artist = await prisma.artist.upsert({
+        where: { id: it!.artistSpotifyId || it!.artistName },
+        update: { name: it!.artistName },
+        create: {
+          id: it!.artistSpotifyId || crypto.randomUUID(),
+          name: it!.artistName,
+          country: null,
+        },
+      });
 
-        // 2) upsert release by spotifyTrackId (must be UNIQUE in DB)
-        const coverUrl = t.album?.images?.[0]?.url || null;
-        const rd = t.album?.release_date ? new Date(t.album.release_date) : null;
-        const albumType = (t.album?.album_type || "single").toUpperCase();
-        const type = (["ALBUM", "EP", "SINGLE"].includes(albumType) ? albumType : "SINGLE") as any;
+      // Release
+      const existing = await prisma.release.findFirst({
+        where: { spotifyTrackId: it!.spotifyTrackId },
+        select: { id: true },
+      });
 
-        const r = await prisma.release.upsert({
-          where: { spotifyTrackId }, // requires a UNIQUE index/field in your DB
-          update: {
-            artistId: artist.id,
-            title,
-            type,
-            releaseDate: rd as any,
-            coverUrl: coverUrl ?? undefined,
-            isMena: Boolean(isMena),
-          },
-          create: {
-            id: crypto.randomUUID(),
-            artistId: artist.id,
-            title,
-            type,
-            releaseDate: rd as any,
-            label: null,
-            coverUrl,
-            isMena: Boolean(isMena),
-            spotifyTrackId,
-          },
-        });
+      const data = {
+        artistId: artist.id,
+        title: it!.title,
+        type: toReleaseType(it!.albumType) as any,
+        releaseDate: it!.releaseDate ? new Date(it!.releaseDate) : null,
+        coverUrl: it!.coverUrl,
+        isMena: false,
+        spotifyTrackId: it!.spotifyTrackId,
+        label: null,
+      };
 
-        // simple inserted/updated heuristic (ignore types here)
-        // @ts-ignore
-        if ((r as any).createdAt && (r as any).createdAt === (r as any).updatedAt) inserted++; else updated++;
-      } catch (e: any) {
-        problems.push(`${t.name} – ${e?.message || e}`);
-      }
+      const release = existing
+        ? await prisma.release.update({ where: { id: existing.id }, data })
+        : await prisma.release.create({ data: { id: crypto.randomUUID(), ...data } });
+
+      await prisma.releaseScore.upsert({
+        where: { releaseId: release.id },
+        update: { lastCalculated: new Date() },
+        create: { releaseId: release.id, audienceScore: null, audienceCount: 0, lastCalculated: new Date() },
+      });
+
+      results.push({ releaseId: release.id, title: release.title, artist: artist.name });
     }
 
-    return Response.json({ ok: true, playlistId, inserted, updated, problems });
-  } catch (e: any) {
-    return Response.json({ ok: false, error: e?.message || "Server error" }, { status: 500 });
+    return Response.json({ ok: true, imported: results.length, items: results });
+  } catch (err: any) {
+    return Response.json({ ok: false, error: String(err) }, { status: 500 });
   }
-}
-
-// Optional: GET for quick testing in a browser
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const playlistId = url.searchParams.get("playlistId");
-  const isMena = url.searchParams.get("isMena") === "true";
-  if (!playlistId) return Response.json({ ok: false, error: "playlistId required" }, { status: 400 });
-  return POST(new Request(req.url, { method: "POST", body: JSON.stringify({ playlistId, isMena }) }));
 }
