@@ -31,6 +31,7 @@ export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to submit rating");
+
       setMsg({ type: "ok", text: "Thanks for rating!" });
       setComment("");
       setStars(0);
@@ -43,13 +44,13 @@ export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="card col" style={{ gap: 14, padding: 16 }}>
+    <form onSubmit={onSubmit} className="card col" style={{ gap: 14, padding: 16, background: "transparent" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <h3 style={{ margin: 0 }}>Rate this release</h3>
         <div className="meta">1–10 stars</div>
       </div>
 
-      <StarRating value={stars} onChange={setStars} max={10} size={32} />
+      <StarRating value={stars} onChange={setStars} max={10} size={34} color="#10b981" />
 
       <div className="grid" style={{ gap: 10 }}>
         <input
@@ -78,28 +79,14 @@ export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <button
-          type="submit"
-          disabled={loading || stars < 1 || stars > 10}
-          className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
-        >
-          {loading ? "Submitting…" : "Submit rating"}
-        </button>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => {
-            setStars(0);
-            setName("");
-            setComment("");
-            setMsg(null);
-          }}
-          className="px-3 py-2 rounded border"
-        >
-          Reset
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={loading || stars < 1 || stars > 10}
+        className="px-4 py-2 rounded text-white disabled:opacity-50"
+        style={{ backgroundColor: "#10b981" }}
+      >
+        {loading ? "Submitting…" : "Submit rating"}
+      </button>
     </form>
   );
 }
