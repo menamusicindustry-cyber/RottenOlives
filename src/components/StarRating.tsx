@@ -20,7 +20,6 @@ export default function StarRating({
   className = "",
 }: StarRatingProps) {
   const [hover, setHover] = useState<number | null>(null);
-
   const current = hover ?? value ?? 0;
 
   return (
@@ -46,18 +45,14 @@ export default function StarRating({
             onFocus={() => !readOnly && setHover(n)}
             onBlur={() => !readOnly && setHover(null)}
             onClick={() => !readOnly && onChange(n)}
-            className={`select-none leading-none ${
-              readOnly ? "cursor-default" : "cursor-pointer"
-            }`}
+            className={`select-none leading-none ${readOnly ? "cursor-default" : "cursor-pointer"}`}
             style={{ fontSize: size, lineHeight: 1 }}
           >
             {symbol}
           </button>
         );
       })}
-      {!readOnly && (
-        <span className="ml-2 text-sm opacity-70">{current}/{max}</span>
-      )}
+      {!readOnly && <span className="ml-2 text-sm opacity-70">{current}/{max}</span>}
     </div>
   );
 }
