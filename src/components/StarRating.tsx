@@ -2,28 +2,22 @@
 
 import { useState } from "react";
 
-/**
- * Accessible star rating (1..max). Filled stars are green (#10b981).
- * Background is transparent; no borders, no box.
- */
 type StarRatingProps = {
-  value: number;                 // 1..max
-  onChange: (v: number) => void; // callback
-  max?: number;                  // default 10
-  size?: number;                 // px, default 30
-  readOnly?: boolean;            // view-only mode
+  value: number;
+  onChange: (v: number) => void;
+  max?: number;
+  size?: number;
+  readOnly?: boolean;
   className?: string;
-  color?: string;                // hex/rgb, default Tailwind emerald-500 (#10b981)
 };
 
 export default function StarRating({
   value,
   onChange,
   max = 10,
-  size = 30,
+  size = 34,
   readOnly = false,
   className = "",
-  color = "#10b981",
 }: StarRatingProps) {
   const [hover, setHover] = useState<number | null>(null);
   const current = hover ?? value ?? 0;
@@ -62,7 +56,6 @@ export default function StarRating({
               padding: 0,
             }}
           >
-            {/* SVG star so we can style fill/stroke exactly */}
             <svg
               width={size}
               height={size}
@@ -72,16 +65,16 @@ export default function StarRating({
             >
               <path
                 d="M12 17.27l-5.4 3.22 1.44-6.19-4.69-4.07 6.24-.53L12 3l2.41 6.7 6.24.53-4.69 4.07 1.44 6.19z"
-                fill={filled ? color : "transparent"}
-                stroke={filled ? color : "currentColor"}
-                strokeWidth="1.5"
+                fill={filled ? "#10b981" : "transparent"}         // green when selected
+                stroke={filled ? "#10b981" : "#9ca3af"}           // gray stroke when empty
+                strokeWidth="1.8"
               />
             </svg>
           </button>
         );
       })}
       {!readOnly && (
-        <span className="ml-2 text-sm opacity-70 tabular-nums">
+        <span className="ml-2 text-sm opacity-80 tabular-nums">
           {current}/{max}
         </span>
       )}
