@@ -5,11 +5,11 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     // 1) Your ID + market param
-    const yours = "37i9dQZEVXbLn7RQmT5Xv2";
+    const yours = "3cEYpjA9oz9GiPac4AsH4n";
     const a = await spotifyFetch(`/v1/playlists/${yours}?market=US`);
 
     // 2) Known-good ID: Today's Top Hits
-    const known = "37i9dQZF1DXcBWIGoYBM5M";
+    const known = "3cEYpjA9oz9GiPac4AsH4n";
     const b = await spotifyFetch(`/v1/playlists/${known}?market=US`);
 
     return Response.json({
