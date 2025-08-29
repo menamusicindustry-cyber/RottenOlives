@@ -1,22 +1,18 @@
+// src/app/api/spotify/import/preview/route.ts
 import { spotifyFetch } from "@/lib/spotify";
-
 export const runtime = "nodejs";
 
 function normalize(item: any) {
-  const t = item.track ?? item; // playlist API nests under .track
+  const t = item.track ?? item;
   if (!t || t.is_local) return null;
-
   const album = t.album;
-  const artists = t.artists ?? [];
-  const primaryArtist = artists[0];
-
+  const primary = (t.artists ?? [])[0];
   return {
     spotifyTrackId: t.id,
     title: t.name,
-    artistSpotifyId: primaryArtist?.id || null,
-    artistName: primaryArtist?.name || "Unknown Artist",
-    albumId: album?.id || null,
-    albumType: album?.album_type || null, // "single" | "album" | "compilation"
+    artistSpotifyId: primary?.id || null,
+    artistName: primary?.name || "Unknown Artist",
+    albumType: album?.album_type || null,
     releaseDate: album?.release_date || null,
     coverUrl: album?.images?.[0]?.url || null,
     previewUrl: t.preview_url || null,
@@ -24,17 +20,31 @@ function normalize(item: any) {
 }
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const playlistId = searchParams.get("playlistId");
-  if (!playlistId) return Response.json({ error: "Missing playlistId" }, { status: 400 });
+  try {
+    const { searchParams } = new URL(req.url);
+    const playlistId = searchParams.get("playlistId");
+    const market = searchParams.get("market") || "US";
+    if (!playlistId) return Response.json({ ok: false, error: "Missing playlistId" }, { status: 400 });
 
-  // Pull playlist items (first 100)
-  const pl = await spotifyFetch(`/v1/playlists/${playlistId}`);
-  const items = (pl?.tracks?.items ?? []).map(normalize).filter(Boolean);
+    const first = await spotifyFetch(`/v1/playlists/${playlistId}?market=${market}`);
+    let items = [...(first?.tracks?.items ?? [])];
+    let next = first?.tracks?.next as string | null;
 
-  return Response.json({
-    ok: true,
-    playlist: { id: pl?.id, name: pl?.name, total: pl?.tracks?.total ?? items.length },
-    items,
-  });
+    while (next) {
+      // next is a full URL; append market if missing
+      const url = next.includes("market=") ? next : `${next}${next.includes("?") ? "&" : "?"}market=${market}`;
+      const page = await spotifyFetch(url);
+      items.push(...(page?.items ?? []));
+      next = page?.next ?? null;
+    }
+
+    const normalized = items.map(normalize).filter(Boolean);
+    return Response.json({
+      ok: true,
+      playlist: { id: first?.id, name: first?.name, total: first?.tracks?.total ?? normalized.length },
+      items: normalized,
+    });
+  } catch (err: any) {
+    return Response.json({ ok: false, error: String(err) }, { status: 500 });
+  }
 }
