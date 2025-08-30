@@ -31,8 +31,5 @@ export default function About() {
         <li>One rating per user per release and one per IP per release to prevent spam.</li>
       </ul>
 
-      <h2>DMCA</h2>
-      <p>To request a takedown, email dmca@yourdomain.example with links and a statement of ownership.</p>
-    </div>
   );
 }
