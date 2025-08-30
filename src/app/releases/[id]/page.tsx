@@ -18,7 +18,7 @@ type AudienceItem = {
   id: string;
   stars: number; // 1..10
   comment: string | null;
-  createdAt: string; // ⬅️ add this
+  createdAt: string;
   user: { name: string | null; email: string };
 };
 
@@ -28,7 +28,7 @@ type ReleaseData = {
   artist: { name: string };
   coverUrl?: string | null;
   audience?: AudienceItem[];
-  audienceScore?: number | null; // should be 1..10 (see backend tweak below)
+  audienceScore?: number | null; // expected 1..10 if your API sets it, else we compute below
   audienceCount?: number | null;
 };
 
@@ -57,7 +57,7 @@ export default function ReleasePage({ params }: { params: { id: string } }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
-  // client-side average fallback if needed
+  // Client-side average if backend didn't send audienceScore
   const clientAvg = useMemo(() => {
     if (!release?.audience?.length) return null;
     const sum = release.audience.reduce((acc, a) => acc + (a.stars || 0), 0);
@@ -74,9 +74,7 @@ export default function ReleasePage({ params }: { params: { id: string } }) {
   if (loading) {
     return (
       <div className="section">
-        <div className="card col">
-          <div className="meta">Loading…</div>
-        </div>
+        <div className="card col"><div className="meta">Loading…</div></div>
       </div>
     );
   }
@@ -91,33 +89,39 @@ export default function ReleasePage({ params }: { params: { id: string } }) {
 
   return (
     <div className="section" style={{ display: "grid", gap: 16 }}>
-      {/* Header with larger cover */}
-      <section className="card col" style={{ gap: 12 }}>
-        <div className="song-cover" style={{ maxWidth: 360 }}>
-          {release.coverUrl ? (
-            <img src={release.coverUrl} alt={`${release.title} cover`} />
-          ) : (
-            <span>No Cover</span>
-          )}
+      {/* -------- Hero: image left, info right on desktop -------- */}
+      <section className="card release-hero">
+        <div className="release-hero__media">
+          <div className="song-cover">
+            {release.coverUrl ? (
+              <img src={release.coverUrl} alt={`${release.title} cover`} />
+            ) : (
+              <span>No Cover</span>
+            )}
+          </div>
         </div>
 
-        <h1 style={{ marginTop: 16 }}>{release.title}</h1>
-        <div className="meta" style={{ marginBottom: 6 }}>
-          {release.artist?.name || "Unknown Artist"}
-        </div>
+        <div className="release-hero__info">
+          <h1 className="release-title">{release.title}</h1>
+          <div className="meta artist-name">{release.artist?.name || "Unknown Artist"}</div>
 
-        <div className="stars" aria-label={`Audience score ${avg10} out of 10`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <StarRating value={avg10} onChange={() => {}} readOnly max={10} size={22} color="#10b981" />
-          <span className="meta">
-            ({Math.round(avg10)} / 10) · {count} rating{count === 1 ? "" : "s"}
-          </span>
+          <div
+            className="stars"
+            aria-label={`Audience score ${avg10} out of 10`}
+            style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}
+          >
+            <StarRating value={avg10} onChange={() => {}} readOnly max={10} size={22} color="#10b981" />
+            <span className="meta">
+              ({Math.round(avg10)} / 10) · {count} rating{count === 1 ? "" : "s"}
+            </span>
+          </div>
         </div>
       </section>
 
-      {/* Star-based rating form */}
+      {/* -------- Rating form (submit button will be oval via CSS) -------- */}
       <AudienceRatingForm releaseId={release.id} onSubmitted={load} />
 
-      {/* Audience list */}
+      {/* -------- Audience list -------- */}
       <section className="card col">
         <h3 style={{ marginTop: 0 }}>Audience Ratings</h3>
         <div className="grid" style={{ gap: 12 }}>
@@ -130,19 +134,14 @@ export default function ReleasePage({ params }: { params: { id: string } }) {
               <div key={a.id} className="card col" style={{ gap: 6 }}>
                 <div className="meta">{a.user?.name || a.user?.email || "Guest"}</div>
 
-                {/* Stars row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {/* Same green, transparent style for posted ratings */}
                   <StarRating value={a.stars} onChange={() => {}} readOnly max={10} size={18} color="#10b981" />
                   <span className="meta">({a.stars} / 10)</span>
                 </div>
 
-                {/* ⬇ Timestamp directly under the stars */}
                 <div className="rating-time">
                   Added{" "}
-                  <time dateTime={a.createdAt}>
-                    {fmtDateISO(a.createdAt)}
-                  </time>
+                  <time dateTime={a.createdAt}>{fmtDateISO(a.createdAt)}</time>
                 </div>
 
                 {a.comment && <div className="meta">{a.comment}</div>}
