@@ -1,4 +1,3 @@
-@@ -1,23 +1,16 @@
 // src/lib/spotify.ts
 // Uses your SPOTIFY_REFRESH_TOKEN to mint short-lived user access tokens.
 // Provides a helper `spotifyFetch` for calling Spotify Web API endpoints.
