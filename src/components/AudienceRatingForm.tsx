@@ -46,50 +46,60 @@ export default function AudienceRatingForm({ releaseId, onSubmitted }: Props) {
   return (
     <form
       onSubmit={onSubmit}
-      className="card col"
+      className="card col rating-form"
       style={{ gap: 14, padding: 16, background: "transparent" }}
     >
       <h3 style={{ margin: 0 }}>Rate this release</h3>
 
       <StarRating value={stars} onChange={setStars} max={10} size={36} />
 
+      {/* Use your site input styles instead of Tailwind placeholders */}
       <input
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Your name (optional)"
-        className="border rounded px-3 py-2"
+        className="input"
       />
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         placeholder="Write a short comment (optional)"
-        className="border rounded px-3 py-2"
+        className="input"
         rows={3}
       />
 
       {msg && (
         <div
-          className={`text-sm rounded px-3 py-2 ${
-            msg.type === "ok" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"
-          }`}
+          className="card"
+          style={{
+            padding: "8px 12px",
+            background: msg.type === "ok" ? "rgba(16,185,129,.15)" : "rgba(239,68,68,.12)",
+            borderColor: "transparent",
+          }}
         >
-          {msg.text}
+          <div
+            className="meta"
+            style={{ color: msg.type === "ok" ? "#8ef0c5" : "#ffb3b3" }}
+          >
+            {msg.text}
+          </div>
         </div>
       )}
 
+      {/* Oval submit button using your global .btn + .btn--pill */}
       <button
         type="submit"
         disabled={loading || stars < 1 || stars > 10}
-        className="px-5 py-2 rounded-full disabled:opacity-50"
+        className="btn btn--pill disabled:opacity-50"
         style={{
-          backgroundColor: "#10b981",
+          backgroundColor: "#10b981", // green
           alignSelf: "flex-start",
+          color: "white",
+          fontWeight: 700,
         }}
       >
-        <span style={{ color: "white", fontWeight: 700 }}>
-          {loading ? "Submitting…" : "Submit"}
-        </span>
+        {loading ? "Submitting…" : "Submit"}
       </button>
     </form>
   );
