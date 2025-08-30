@@ -10,12 +10,11 @@ function toReleaseType(albumType?: string | null): ReleaseType {
   const t = (albumType || "").toLowerCase();
   if (t === "album") return ReleaseType.ALBUM;
   if (t === "ep") return ReleaseType.EP;
-  // Spotify usually gives: "album" | "single" | "compilation"
-  // If "compilation", treat as ALBUM; default to SINGLE.
+  // treat "single" and unknowns as SINGLE
   return ReleaseType.SINGLE;
 }
 
-// A strongly-typed normalized track item
+// Strongly-typed normalized track item
 type Normalized = {
   spotifyTrackId: string;
   title: string;
@@ -27,7 +26,6 @@ type Normalized = {
   label: string | null;
 };
 
-// Convert a playlist item -> Normalized or null
 function normalize(item: any): Normalized | null {
   const t = item?.track ?? item;
   if (!t || t.is_local) return null;
@@ -47,10 +45,9 @@ function normalize(item: any): Normalized | null {
   };
 }
 
-/** Make sure an Artist exists. Prefer Spotify artist id as primary key if available. */
+/** Prefer Spotify artist id for stability; otherwise reuse by name */
 async function getOrCreateArtist(artistSpotifyId: string | null, artistName: string) {
   if (artistSpotifyId) {
-    // Try by id first (use Spotify id as our Artist.id for stability)
     const byId = await prisma.artist.findUnique({ where: { id: artistSpotifyId } });
     if (byId) {
       if (artistName && byId.name !== artistName) {
@@ -58,15 +55,11 @@ async function getOrCreateArtist(artistSpotifyId: string | null, artistName: str
       }
       return byId;
     }
-    // If not found by id, try by name to avoid dupes, else create with Spotify id
     const byName = await prisma.artist.findFirst({ where: { name: artistName } });
     if (byName) return byName;
-    return prisma.artist.create({
-      data: { id: artistSpotifyId, name: artistName, country: null },
-    });
+    return prisma.artist.create({ data: { id: artistSpotifyId, name: artistName, country: null } });
   }
 
-  // No Spotify id: reuse by name if present, else create a new cuid()-based row
   const byName = await prisma.artist.findFirst({ where: { name: artistName } });
   if (byName) return byName;
   return prisma.artist.create({ data: { name: artistName, country: null } });
@@ -80,11 +73,12 @@ export async function POST(req: Request) {
       return Response.json({ ok: false, error: "Missing playlistId" }, { status: 400 });
     }
 
-    // Fetch playlist with tracks
+    // Fetch playlist (with tracks)
     const pl = await spotifyFetch(`/v1/playlists/${playlistId}?market=US`);
     const items = (pl?.tracks?.items ?? [])
       .map(normalize)
-      .filter((x): x is Normalized => x !== null); // type guard to satisfy TS
+      // >>> the line that fixes the build error <<<
+      .filter((x: Normalized | null): x is Normalized => x !== null);
 
     if (dryRun) {
       return Response.json({ ok: true, previewCount: items.length, items });
@@ -93,13 +87,13 @@ export async function POST(req: Request) {
     const results: Array<{ releaseId: string; title: string; artist: string }> = [];
 
     for (const it of items) {
-      // We key ONLY by spotifyTrackId (your schema has spotifyTrackId String? @unique)
+      // Key ONLY by spotifyTrackId
       if (!it.spotifyTrackId) continue;
 
-      // Ensure Artist row
+      // 1) Ensure Artist exists
       const artist = await getOrCreateArtist(it.artistSpotifyId, it.artistName);
 
-      // Prepare release data
+      // 2) Prepare release data
       const data = {
         artistId: artist.id,
         title: it.title,
@@ -111,7 +105,7 @@ export async function POST(req: Request) {
         spotifyTrackId: it.spotifyTrackId,
       };
 
-      // *** THE IMPORTANT PART: upsert strictly by spotifyTrackId ***
+      // 3) Upsert strictly by spotifyTrackId
       const release = await prisma.release.upsert({
         where: { spotifyTrackId: it.spotifyTrackId },
         update: {
@@ -136,7 +130,7 @@ export async function POST(req: Request) {
         select: { id: true, title: true },
       });
 
-      // Ensure a ReleaseScore row exists
+      // 4) Ensure a ReleaseScore row exists
       await prisma.releaseScore.upsert({
         where: { releaseId: release.id },
         update: { lastCalculated: new Date() },
