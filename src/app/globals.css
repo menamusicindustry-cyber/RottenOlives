@@ -281,3 +281,11 @@ input:focus, textarea:focus, select:focus {
 /* If your form uses <input type="submit"> instead of <button> */
 .rating-form [type="submit"] { border-radius: 9999px; }
 
+/* Timestamp under the stars on each rating card */
+.rating-time {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+
