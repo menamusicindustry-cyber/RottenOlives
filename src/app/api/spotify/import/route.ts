@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { spotifyFetch } from "@/lib/spotify";
 
+export const runtime = "nodejs";
+
 type SpotifyArtist = {
   id: string;
   name: string;
@@ -51,10 +53,8 @@ const toReleaseType = (albumType: SpotifyAlbum["album_type"] | undefined) => {
 // Spotify date can be YYYY-MM-DD, YYYY-MM, or YYYY
 const parseReleaseDate = (s?: string): Date | null => {
   if (!s) return null;
-  // ensure a full date
   if (/^\d{4}$/.test(s)) return new Date(`${s}-01-01T00:00:00Z`);
   if (/^\d{4}-\d{2}$/.test(s)) return new Date(`${s}-01T00:00:00Z`);
-  // Assume yyyy-mm-dd
   const d = new Date(`${s}T00:00:00Z`);
   return isNaN(d.getTime()) ? null : d;
 };
@@ -81,7 +81,9 @@ export async function POST(req: NextRequest) {
 
     // Fetch all playlist tracks (handle pagination)
     const tracks: SpotifyTrack[] = [];
-    let url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks?limit=50`;
+    let url: string | null = `https://api.spotify.com/v1/playlists/${encodeURIComponent(
+      playlistId
+    )}/tracks?limit=50`;
     while (url) {
       const page = (await spotifyFetch(url)) as SpotifyPlaylistTracksResponse;
       for (const item of page.items ?? []) {
@@ -89,7 +91,7 @@ export async function POST(req: NextRequest) {
           tracks.push(item.track);
         }
       }
-      url = page.next;
+      url = page.next; // page.next is string | null
     }
 
     // De-dupe by track.id
@@ -125,40 +127,17 @@ export async function POST(req: NextRequest) {
       const type = toReleaseType(track.album?.album_type);
 
       // Prefer upsert by spotifyTrackId (unique), fallback to composite if missing
-      let release = await prisma.release.upsert({
-        where: { spotifyTrackId }, // requires @unique on spotifyTrackId
-        update: {
-          title,
-          artistId,
-          coverUrl: coverUrl ?? undefined,
-          label: label ?? undefined,
-          releaseDate: releaseDate ?? undefined,
-          type,
-          isMena,
-        },
-        create: {
-          artistId,
-          title,
-          coverUrl: coverUrl ?? undefined,
-          label: label ?? undefined,
-          releaseDate: releaseDate ?? undefined,
-          type,
-          isMena,
-          spotifyTrackId,
-        },
-      }).catch(async (err) => {
-        // Fallback: upsert by composite unique (artistId+title)
-        // (This path is used if spotifyTrackId is somehow null or uniqueness violated)
-        return prisma.release.upsert({
-          where: { artistId_title: { artistId, title } },
+      const release = await prisma.release
+        .upsert({
+          where: { spotifyTrackId }, // requires @unique on spotifyTrackId
           update: {
+            title,
+            artistId,
             coverUrl: coverUrl ?? undefined,
             label: label ?? undefined,
             releaseDate: releaseDate ?? undefined,
             type,
             isMena,
-            // try to set spotifyTrackId if not already present
-            spotifyTrackId,
           },
           create: {
             artistId,
@@ -170,8 +149,32 @@ export async function POST(req: NextRequest) {
             isMena,
             spotifyTrackId,
           },
+        })
+        .catch(async () => {
+          // Fallback: upsert by composite unique (artistId+title)
+          return prisma.release.upsert({
+            where: { artistId_title: { artistId, title } },
+            update: {
+              coverUrl: coverUrl ?? undefined,
+              label: label ?? undefined,
+              releaseDate: releaseDate ?? undefined,
+              type,
+              isMena,
+              // try to set spotifyTrackId if not already present
+              spotifyTrackId,
+            },
+            create: {
+              artistId,
+              title,
+              coverUrl: coverUrl ?? undefined,
+              label: label ?? undefined,
+              releaseDate: releaseDate ?? undefined,
+              type,
+              isMena,
+              spotifyTrackId,
+            },
+          });
         });
-      });
 
       // Ensure ReleaseScore exists
       await prisma.releaseScore.upsert({
@@ -179,25 +182,6 @@ export async function POST(req: NextRequest) {
         update: {}, // nothing to update here
         create: { releaseId: release.id },
       });
-
-      // OPTIONAL: if you have genre names to attach (e.g., from elsewhere)
-      // const genreNames: string[] = []; // supply if available
-      // if (genreNames.length) {
-      //   // Upsert genres and connect
-      //   const genres = await Promise.all(
-      //     genreNames.map((name) =>
-      //       prisma.genre.upsert({
-      //         where: { name },
-      //         update: {},
-      //         create: { name },
-      //       })
-      //     )
-      //   );
-      //   await prisma.releaseGenre.createMany({
-      //     data: genres.map((g) => ({ releaseId: release.id, genreId: g.id })),
-      //     skipDuplicates: true,
-      //   });
-      // }
 
       results.push({ trackId: spotifyTrackId, releaseId: release.id });
     }
