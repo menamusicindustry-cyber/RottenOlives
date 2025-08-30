@@ -1,5 +1,15 @@
 // prisma/schema.prisma
 
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")   // <- or change to whatever env var you use
+  // directUrl = env("SHADOW_DATABASE_URL") // optional (for migrations)
+}
+
 enum ReleaseType {
   SINGLE
   EP
