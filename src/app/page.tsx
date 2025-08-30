@@ -1,7 +1,8 @@
 // src/app/page.tsx
+import React from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client"; // ⬅️ import Prisma types
+import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
   const page = Math.max(1, Number(searchParams?.page) || 1);
   const per = 60;
 
-  // ⬇️ Explicitly type the where to satisfy TS + use relation filter with `is`
+  // Typed where + proper relation filter + enum mode
   const where: Prisma.ReleaseWhereInput | undefined = q
     ? {
         OR: [
@@ -29,7 +30,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
     prisma.release.findMany({
       where,
       include: { artist: true, scores: true },
-      orderBy: [{ releaseDate: "desc" }, { id: "desc" }],
+      orderBy: [{ releaseDate: "desc" }, { id: "desc" }], // stable tie-breaker
       skip: (page - 1) * per,
       take: per,
     }),
@@ -39,14 +40,13 @@ export default async function HomePage({ searchParams }: HomeProps) {
   const rangeFrom = total === 0 ? 0 : (page - 1) * per + 1;
   const rangeTo = Math.min(total, page * per);
 
+  // Prev/Next preserving q
   const prevParams = new URLSearchParams();
   if (q) prevParams.set("q", q);
   prevParams.set("page", String(Math.max(1, page - 1)));
-
   const nextParams = new URLSearchParams();
   if (q) nextParams.set("q", q);
   nextParams.set("page", String(Math.min(pageCount, page + 1)));
-
   const prevHref = `/?${prevParams.toString()}`;
   const nextHref = `/?${nextParams.toString()}`;
 
@@ -75,7 +75,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
                 key={r.id}
                 href={`/releases/${r.id}`}
                 className="card col"
-                aria-label={`${r.title} by ${r.artist?.name || "Unknown"}`}
+                aria-label={`${r.title} by ${r.artist?.name || "Unknown Artist"}`}
               >
                 <div className="song-cover">
                   {r.coverUrl ? <img src={r.coverUrl} alt={`${r.title} cover`} /> : <span>No Cover</span>}
@@ -94,4 +94,27 @@ export default async function HomePage({ searchParams }: HomeProps) {
             <Link
               href={prevHref}
               className="btn"
-              aria-disabled={page <= 1
+              aria-disabled={page <= 1}
+              style={page <= 1 ? { pointerEvents: "none", opacity: 0.5 } : undefined}
+            >
+              ← Prev
+            </Link>
+
+            <div className="pager__info">
+              Page {page} of {pageCount} · Showing {rangeFrom}–{rangeTo} of {total}
+            </div>
+
+            <Link
+              href={nextHref}
+              className="btn"
+              aria-disabled={page >= pageCount}
+              style={page >= pageCount ? { pointerEvents: "none", opacity: 0.5 } : undefined}
+            >
+              Next →
+            </Link>
+          </nav>
+        </>
+      )}
+    </div>
+  );
+}
