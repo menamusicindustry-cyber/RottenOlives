@@ -65,4 +65,15 @@ model AudienceRating {
 model ReleaseScore {
   releaseId      String  @id
   audienceScore  Float?
-  audie
+  audienceCount  Int     @default(0)
+  lastCalculated DateTime @default(now())
+  release        Release @relation(fields: [releaseId], references: [id])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String
+  name      String?
+  createdAt DateTime  @default(now())
+  ratings   AudienceRating[]
+}
