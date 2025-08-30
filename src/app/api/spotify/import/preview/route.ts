@@ -101,9 +101,10 @@ export async function GET(req: NextRequest) {
 
     // ---- Fetch all playlist tracks (handles pagination) ----
     const collected: SpotifyTrack[] = [];
-    let url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(
-      playlistId
-    )}/tracks?limit=50${market ? `&market=${encodeURIComponent(market)}` : ""}`;
+    let url: string | null = `https://api.spotify.com/v1/playlists/${encodeURIComponent(
+  playlistId
+)}/tracks?limit=50${market ? `&market=${encodeURIComponent(market)}` : ""}`;
+
 
     while (url) {
       const page = (await spotifyFetch(url)) as SpotifyPlaylistTracksResponse;
