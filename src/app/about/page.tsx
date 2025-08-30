@@ -1,8 +1,13 @@
+// src/app/about/page.tsx
+import React from "react";
+
 export default function About() {
   return (
     <div className="prose prose-sm max-w-none">
       <h1>About Rotten Olives</h1>
-      <p>Community-driven music reviews with a MENA-friendly focus. Audience ratings only (for now).</p>
+      <p>
+        Community-driven music reviews with a MENA-friendly focus. Audience ratings only (for now).
+      </p>
 
       <h2>How tracks are added</h2>
       <ul>
@@ -30,6 +35,6 @@ export default function About() {
         <li>Cover art is shown via links/embeds only.</li>
         <li>One rating per user per release and one per IP per release to prevent spam.</li>
       </ul>
-
+    </div>
   );
 }
