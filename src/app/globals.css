@@ -181,3 +181,28 @@ input:focus, textarea:focus, select:focus {
    ========= */
 .tile { display: flex; gap: var(--gap-3); align-items: center; }
 .title { font-weight: 700; }
+
+/* ========== */
+/* Mobile 3up */
+/* ========== */
+/* Apply alongside `.grid` to force 3 columns on mobile for release cards */
+.grid--mobile-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Ultra-narrow phones fallback (optional but recommended) */
+@media (max-width: 360px) {
+  .grid--mobile-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Optional: give desktop a little extra density for these sections */
+@media (min-width: 900px) {
+  .grid--mobile-3 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Optional: slightly tighter gaps for the denser grid */
+.grid--mobile-3 { gap: var(--gap-2); }
