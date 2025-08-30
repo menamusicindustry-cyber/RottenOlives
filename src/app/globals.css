@@ -348,4 +348,16 @@ input:focus, textarea:focus, select:focus {
 /* If your form uses a plain <button> without .btn classes, force oval: */
 .rating-form button[type="submit"] { border-radius: 9999px !important; }
 
+.pager {
+  display: flex;
+  gap: var(--gap-2);
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: var(--gap-3);
+}
+.pager__info { color: var(--text-dim); font-size: 0.95rem; }
+.pager .btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+
 
