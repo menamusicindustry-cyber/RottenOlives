@@ -1,18 +1,23 @@
 import { cookies } from "next/headers";
 import { spotifyFetch } from "@/lib/spotify";
-
 export const runtime = "nodejs";
 
 function requireAdmin() {
-@@ -12,6 +13,7 @@ function requireAdmin() {
+  if (cookies().get("admin")?.value !== "1") {
+    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), { status: 401 });
+  }
+  return null;
+}
+
 function normalize(item: any) {
   const t = item.track ?? item;
   if (!t || t.is_local) return null;
-
   const album = t.album;
   const artists = t.artists ?? [];
   const primaryArtist = artists[0];
-@@ -21,7 +23,7 @@ function normalize(item: any) {
+
+  return {
+    spotifyTrackId: t.id,
     title: t.name,
     artistSpotifyId: primaryArtist?.id || null,
     artistName: primaryArtist?.name || "Unknown Artist",
@@ -20,10 +25,22 @@ function normalize(item: any) {
     releaseDate: album?.release_date || null,
     coverUrl: album?.images?.[0]?.url || null,
     previewUrl: t.preview_url || null,
-@@ -42,14 +44,25 @@ export async function GET(req: Request) {
+  };
+}
+
+export async function GET(req: Request) {
+  const guard = requireAdmin();
+  if (guard) return guard;
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const playlistId = searchParams.get("playlistId");
+    const market = searchParams.get("market") || "US";
+    if (!playlistId) return Response.json({ ok: false, error: "Missing playlistId" }, { status: 400 });
+
+    const first = await spotifyFetch(`/v1/playlists/${playlistId}?market=${market}`);
     let items = [...(first?.tracks?.items ?? [])];
     let next = first?.tracks?.next as string | null;
-
 
     while (next) {
       const url = next.includes("market=") ? next : `${next}${next.includes("?") ? "&" : "?"}market=${market}`;
@@ -33,8 +50,12 @@ function normalize(item: any) {
     }
 
     const normalized = items.map(normalize).filter(Boolean);
-
-
     return Response.json({
       ok: true,
       playlist: { id: first?.id, name: first?.name, total: first?.tracks?.total ?? normalized.length },
+      items: normalized,
+    });
+  } catch (err: any) {
+    return Response.json({ ok: false, error: String(err) }, { status: 500 });
+  }
+}
