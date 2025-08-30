@@ -1,169 +1,138 @@
-import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+"use client";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+import { useEffect, useMemo, useState } from "react";
+import AudienceRatingForm from "@/components/AudienceRatingForm";
+import StarRating from "@/components/StarRating";
 
-type PageProps = { params: { id: string } };
+type AudienceItem = {
+  id: string;
+  stars: number; // 1..10
+  comment: string | null;
+  user: { name: string | null; email: string };
+};
 
-// Tiny server-side formatter so we don't ship any client date libs
-function formatDate(d?: Date | null) {
-  if (!d) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  }).format(d);
-}
+type ReleaseData = {
+  id: string;
+  title: string;
+  artist: { name: string };
+  coverUrl?: string | null;
+  audience?: AudienceItem[];
+  audienceScore?: number | null; // should be 1..10 (see backend tweak below)
+  audienceCount?: number | null;
+};
 
-export default async function ReleasePage({ params }: PageProps) {
-  const release = await prisma.release.findUnique({
-    where: { id: params.id },
-    include: { artist: true, scores: true },
-  });
+export default function ReleasePage({ params }: { params: { id: string } }) {
+  const [release, setRelease] = useState<ReleaseData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  if (!release) {
+  async function load() {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      const res = await fetch(`/api/release?id=${params.id}`, { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to load release");
+      setRelease(json.release || json);
+    } catch (e: any) {
+      setErrorMsg(String(e?.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
+
+  // Fallback client-side average if backend aggregate hasn't populated yet
+  const clientAvg = useMemo(() => {
+    if (!release?.audience?.length) return null;
+    const sum = release.audience.reduce((acc, a) => acc + (a.stars || 0), 0);
+    return sum / release.audience.length; // 1..10
+  }, [release?.audience]);
+
+  const avg10 =
+    (release?.audienceScore && isFinite(release.audienceScore) ? release.audienceScore : null) ??
+    clientAvg ??
+    0;
+
+  const count = release?.audienceCount ?? release?.audience?.length ?? 0;
+
+  if (loading) {
     return (
-      <div className="section container">
-        <div className="card"><h1>Release not found</h1></div>
+      <div className="section">
+        <div className="meta">Loading…</div>
+      </div>
+    );
+  }
+  if (errorMsg || !release) {
+    return (
+      <div className="section card">
+        <h3 style={{ marginTop: 0 }}>Something went wrong</h3>
+        <div className="meta">{errorMsg || "Unknown error"}</div>
       </div>
     );
   }
 
-  // Fetch individual audience ratings for this release
-  // NOTE: If your name field is userName or author, change `name: true` accordingly.
-  const ratings = await prisma.rating.findMany({
-    where: { releaseId: release.id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      value: true,        // 1..10
-      comment: true,      // optional text
-      createdAt: true,    // <-- used for "Added" timestamp
-      name: true,         // <-- change if your field differs
-    },
-  });
-
-  // Optional: compute a /10 average from your /100 audienceScore
-  const avg10 =
-    release.scores?.audienceScore != null
-      ? Math.round(release.scores.audienceScore / 10)
-      : null;
-
   return (
-    <div className="section container">
-      <div className="card">
-        <div className="song-cover" style={{ maxWidth: 360 }}>
-          {release.coverUrl ? (
-            <img src={release.coverUrl} alt={`${release.title} cover`} />
-          ) : (
-            <span>No Cover</span>
+    <div className="section" style={{ display: "grid", gap: 16 }}>
+      {/* Header with larger cover */}
+      <header
+        className="card"
+        style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 16, alignItems: "center" }}
+      >
+        {release.coverUrl && (
+          <img
+            src={release.coverUrl}
+            alt={release.title}
+            width={280}
+            height={280}
+            style={{ borderRadius: 14, objectFit: "cover" }}
+          />
+        )}
+        <div className="col" style={{ gap: 8 }}>
+          <h2 style={{ margin: 0 }}>{release.title}</h2>
+          <div className="meta">by {release.artist?.name}</div>
+          <div className="meta">
+            Audience score: {avg10 ? avg10.toFixed(1) : "—"} / 10 • {count} rating{count === 1 ? "" : "s"}
+          </div>
+          {/* Visualize average with read-only stars */}
+          {!!avg10 && (
+            <div style={{ marginTop: 6 }}>
+              <StarRating value={Math.round(avg10)} onChange={() => {}} readOnly max={10} size={22} color="#10b981" />
+            </div>
           )}
         </div>
+      </header>
 
-        <h1 style={{ marginTop: 16 }}>{release.title}</h1>
-        <div className="meta" style={{ marginBottom: 12 }}>
-          {release.artist?.name || "Unknown Artist"}
-        </div>
+      {/* Star-based rating form */}
+      <AudienceRatingForm releaseId={release.id} onSubmitted={load} />
 
-        {/* Overall audience score (optional) */}
-        {avg10 != null && (
-          <div className="card" style={{ marginTop: 16 }}>
-            <div className="title" style={{ marginBottom: 8 }}>Audience Score</div>
-            <div className="stars" aria-label={`Audience score ${avg10} out of 10`}>
-              <Stars10 value={avg10} />
-              <span className="meta" style={{ marginLeft: 8 }}>
-                ({avg10} / 10) · {release.scores?.audienceCount ?? 0} ratings
-              </span>
+      {/* Audience list */}
+      <section className="card col">
+        <h3 style={{ marginTop: 0 }}>Audience Ratings</h3>
+        <div className="grid" style={{ gap: 12 }}>
+          {!release.audience?.length ? (
+            <div className="card col">
+              <div className="meta">No audience ratings yet.</div>
             </div>
-          </div>
-        )}
-
-        {/* Rating form (example) */}
-        <form action="/api/ratings" method="post" className="rating-form" style={{ marginTop: 16 }}>
-          <input type="hidden" name="releaseId" value={release.id} />
-          <div style={{ display: "grid", gap: 8, maxWidth: 420 }}>
-            <label className="meta">
-              Your name
-              <input name="name" className="input" placeholder="e.g., Ali" />
-            </label>
-
-            <label className="meta">
-              Your rating (1–10)
-              <input
-                name="value"
-                type="number"
-                min={1}
-                max={10}
-                step={1}
-                required
-                className="input"
-                placeholder="9"
-              />
-            </label>
-
-            <label className="meta">
-              Comment (optional)
-              <textarea name="comment" className="input" rows={3} placeholder="What did you think?" />
-            </label>
-
-            <button type="submit" className="btn btn--pill">Submit rating</button>
-          </div>
-        </form>
-      </div>
-
-      {/* Audience Ratings list */}
-      <section className="section" style={{ marginTop: 16 }}>
-        <h2>Audience Ratings</h2>
-        {ratings.length === 0 ? (
-          <div className="card"><div className="meta">No audience ratings yet.</div></div>
-        ) : (
-          <div className="grid">
-            {ratings.map((rt) => (
-              <div key={rt.id} className="card rating-card" aria-label={`Rating by ${rt.name || "Anonymous"}`}>
-                <div className="title">{rt.name || "Anonymous"}</div>
-
-                {/* Stars row */}
-                <div className="stars">
-                  <Stars10 value={rt.value} />
-                  <span className="meta" style={{ marginLeft: 8 }}>({rt.value} / 10)</span>
+          ) : (
+            release.audience.map((a) => (
+              <div key={a.id} className="card col" style={{ gap: 6 }}>
+                <div className="meta">{a.user?.name || a.user?.email || "Guest"}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {/* Same green, transparent style for posted ratings */}
+                  <StarRating value={a.stars} onChange={() => {}} readOnly max={10} size={18} color="#10b981" />
+                  <span className="meta">({a.stars} / 10)</span>
                 </div>
-
-                {/* TIMESTAMP: sits directly under the stars */}
-                <div className="rating-time">
-                  Added{" "}
-                  <time dateTime={rt.createdAt.toISOString()}>
-                    {formatDate(rt.createdAt)}
-                  </time>
-                </div>
-
-                {rt.comment && (
-                  <div className="meta" style={{ marginTop: 8 }}>
-                    {rt.comment}
-                  </div>
-                )}
+                {a.comment && <div className="meta">{a.comment}</div>}
               </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ marginTop: 16 }}>
-          <Link href="/">← Back to latest</Link>
+            ))
+          )}
         </div>
       </section>
-    </div>
-  );
-}
-
-/** Simple 10-star display used for both average and individual ratings */
-function Stars10({ value }: { value: number }) {
-  const filled = Math.max(0, Math.min(10, Math.round(value)));
-  return (
-    <div style={{ display: "inline-flex", gap: 2 }} aria-hidden="true">
-      {Array.from({ length: 10 }).map((_, i) => (
-        <span key={i}>{i < filled ? "★" : "☆"}</span>
-      ))}
     </div>
   );
 }
