@@ -288,4 +288,64 @@ input:focus, textarea:focus, select:focus {
   opacity: 0.75;
 }
 
+/* --- Desktop-only split hero (image left, info right) --- */
+.release-hero {
+  display: grid;
+  gap: 16px;
+}
+
+/* Image sizing defaults (mobile stacked) */
+.release-hero__media .song-cover {
+  max-width: 360px;
+}
+.release-hero__media .song-cover img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Desktop layout: two columns */
+@media (min-width: 1024px) {
+  .release-hero {
+    grid-template-columns: 360px 1fr; /* image column, info column */
+    align-items: start;
+  }
+  .release-hero__media .song-cover {
+    max-width: 100%;
+  }
+  .release-title { margin-top: 0; }
+  .artist-name { margin-top: 4px; }
+}
+
+/* Timestamp style under stars (audience cards) */
+.rating-time {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+/* --- Reusable pill (oval) button --- */
+/* If you want to keep Tailwind `rounded-full`, you can skip this block.
+   To enforce site-wide style, use `.btn btn--pill` or target the form below. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  line-height: 1;
+  border: 1px solid var(--border, #2a2a2a);
+  background: var(--button-bg, #111);
+  color: var(--button-fg, #fff);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.btn--pill { border-radius: 9999px; }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* If your form uses a plain <button> without .btn classes, force oval: */
+.rating-form button[type="submit"] { border-radius: 9999px !important; }
+
 
