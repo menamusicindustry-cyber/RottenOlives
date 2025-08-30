@@ -181,3 +181,71 @@ input:focus, textarea:focus, select:focus {
    ========= */
 .tile { display: flex; gap: var(--gap-3); align-items: center; }
 .title { font-weight: 700; }
+
+/* ========== */
+/* Mobile 3up */
+/* ========== */
+/* Apply alongside `.grid` to force 3 columns on mobile for release cards */
+.grid--mobile-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Ultra-narrow phones fallback (optional but recommended) */
+@media (max-width: 360px) {
+  .grid--mobile-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Optional: give desktop a little extra density for these sections */
+@media (min-width: 900px) {
+  .grid--mobile-3 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Optional: slightly tighter gaps for the denser grid */
+.grid--mobile-3 { gap: var(--gap-2); }
+
+/* Bigger cover images on mobile in the 3-up grids */
+@media (max-width: 600px) {
+  /* tighten padding so image can be larger without increasing card height too much */
+  .grid--mobile-3 .card {
+    padding: 10px;
+  }
+
+  /* make the image full-bleed inside the card and square (taller) */
+  .grid--mobile-3 .song-cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;         /* square cover for a larger visual area */
+    margin: -10px -10px 10px;    /* bleed to card edges; keep 10px bottom gap */
+    overflow: hidden;
+    border-radius: 12px;         /* keep rounded corners */
+    background: #111;            /* fallback bg while image loads */
+  }
+
+  .grid--mobile-3 .song-cover img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;           /* crops to fill the square nicely */
+    object-position: center;
+  }
+
+  /* optional: give the grid a slightly tighter gap so images feel even bigger */
+  .grid--mobile-3 { gap: 8px; }
+
+  /* optional: nudge text down a bit so the image dominates visually */
+  .grid--mobile-3 .title { font-size: 0.95rem; line-height: 1.15; }
+  .grid--mobile-3 .meta  { font-size: 0.82rem; }
+}
+
+/* Ultra-narrow phones tweak */
+@media (max-width: 360px) {
+  .grid--mobile-3 .card { padding: 8px; }
+  .grid--mobile-3 .song-cover { margin: -8px -8px 8px; border-radius: 10px; }
+  .grid--mobile-3 { gap: 6px; }
+  .grid--mobile-3 .title { font-size: 0.9rem; }
+  .grid--mobile-3 .meta  { font-size: 0.78rem; }
+}
