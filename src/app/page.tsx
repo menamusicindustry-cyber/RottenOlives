@@ -33,9 +33,14 @@ export default async function HomePage({ searchParams }: HomeProps) {
         {releases.length === 0 ? (
           <div className="card"><div className="meta">No releases found.</div></div>
         ) : (
-          <div className="grid">
+          <div className="grid grid--mobile-3">
             {releases.map((r) => (
-              <Link key={r.id} href={`/releases/${r.id}`} className="card col" aria-label={`${r.title} by ${r.artist?.name || "Unknown"}`}>
+              <Link
+                key={r.id}
+                href={`/releases/${r.id}`}
+                className="card col"
+                aria-label={`${r.title} by ${r.artist?.name || "Unknown"}`}
+              >
                 <div className="song-cover">
                   {r.coverUrl ? <img src={r.coverUrl} alt={`${r.title} cover`} /> : <span>No Cover</span>}
                 </div>
@@ -65,9 +70,14 @@ export default async function HomePage({ searchParams }: HomeProps) {
       {releases.length === 0 && (
         <div className="card"><div className="meta">No releases yet.</div></div>
       )}
-      <div className="grid">
+      <div className="grid grid--mobile-3">
         {releases.map((r) => (
-          <Link key={r.id} href={`/releases/${r.id}`} className="card col" aria-label={`${r.title} by ${r.artist?.name || "Unknown"}`}>
+          <Link
+            key={r.id}
+            href={`/releases/${r.id}`}
+            className="card col"
+            aria-label={`${r.title} by ${r.artist?.name || "Unknown"}`}
+          >
             <div className="song-cover">
               {r.coverUrl ? <img src={r.coverUrl} alt={`${r.title} cover`} /> : <span>No Cover</span>}
             </div>
