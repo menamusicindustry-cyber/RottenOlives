@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
 
               <span className="brand__subtitle">
-                Brought to you by the idiots at{" "}
+                by the idiots at{" "}
                 <a
                   href="https://instagram.com/menamusicindustry"
                   target="_blank"
