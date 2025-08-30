@@ -35,6 +35,12 @@ export default function About() {
         <li>Cover art is shown via links/embeds only.</li>
         <li>One rating per user per release and one per IP per release to prevent spam.</li>
       </ul>
+
+      <h2>Legal</h2>
+      <p>© {new Date().getFullYear()} Rotten Olives. All rights reserved.</p>
+      <p className="meta">
+        All trademarks are property of their respective owners. Spotify is a trademark of Spotify AB.
+      </p>
     </div>
   );
 }
