@@ -1,86 +1,56 @@
-// ---------
-// Datasource & Generator
-// ---------
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+// prisma/schema.prisma
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-// ---------
-// Enums
-// ---------
-// If your DB already has a ReleaseType enum with different members/casing,
-// you can change these names to match. Your import code will still work.
 enum ReleaseType {
-  single
-  album
-  compilation
+  SINGLE
+  EP
+  ALBUM
+  COMPILATION
+  UNKNOWN
 }
-
-// ---------
-// Models
-// ---------
 
 model Artist {
-  id       String   @id                 // text
-  name     String
-  country  String?
-
-  // Back-rel to Release via Release.artistId
+  id      String  @id        // we’ll store Spotify artist ID here
+  name    String
+  country String?
   releases Release[]
 }
 
-model Release {
-  id             String       @id       // text
-  artistId       String
-  artist         Artist       @relation(fields: [artistId], references: [id])
-
-  title          String
-  type           ReleaseType
-  releaseDate    DateTime?
-  label          String?
-  coverUrl       String?
-  isMena         Boolean      @default(false)
-
-  // Use this as the only unique for de-duping Spotify imports
-  spotifyTrackId String?      @unique
-
-  // Back-relations to child tables
-  genres         ReleaseGenre[]
-  ratings        AudienceRating[]
-  score          ReleaseScore?
-
-  @@index([artistId])
-  // Make sure this is NOT present anymore:
-  // @@unique([artistId, title])
-}
-
 model Genre {
-  id       Int            @id @default(autoincrement())
-  name     String
+  id   Int     @id @default(autoincrement())
+  name String  @unique
   releases ReleaseGenre[]
 }
 
-model ReleaseGenre {
-  // Join table between Release and Genre
-  releaseId String
-  release   Release @relation(fields: [releaseId], references: [id])
+model Release {
+  id              String   @id @default(cuid())
+  artistId        String
+  title           String
+  type            ReleaseType
+  releaseDate     DateTime?
+  label           String?
+  coverUrl        String?
+  isMena          Boolean  @default(false)
+  spotifyTrackId  String?  @unique  // ← IMPORTANT for upsert
+  artist          Artist   @relation(fields: [artistId], references: [id])
+  genres          ReleaseGenre[]
+  ratings         AudienceRating[]
+  score           ReleaseScore?
 
+  @@unique([artistId, title]) // keep this — we’ll fall back to it when needed
+}
+
+model ReleaseGenre {
+  releaseId String
   genreId   Int
+  release   Release @relation(fields: [releaseId], references: [id])
   genre     Genre   @relation(fields: [genreId], references: [id])
 
-  @@id([releaseId, genreId])
+  @@id([releaseId, genreId]) // or @@unique([releaseId, genreId])
 }
 
 model AudienceRating {
   id         String   @id @default(cuid())
   releaseId  String
-  release    Release  @relation(fields: [releaseId], references: [id])
-
   userId     String
   stars      Int
   comment    String?
@@ -88,24 +58,11 @@ model AudienceRating {
   ipHash     String?
   subnetHash String?
   ipVersion  Int?
+  release    Release  @relation(fields: [releaseId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 }
 
 model ReleaseScore {
-  // One-to-one with Release
   releaseId      String  @id
-  release        Release @relation(fields: [releaseId], references: [id])
-
   audienceScore  Float?
-  audienceCount  Int     @default(0)
-  lastCalculated DateTime @default(now())
-}
-
-model User {
-  id        String   @id
-  email     String
-  name      String?
-  createdAt DateTime @default(now())
-
-  // If you later enforce userId as FK in AudienceRating, you can add:
-  // ratings AudienceRating[]
-}
+  audie
