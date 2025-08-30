@@ -1,133 +1,107 @@
-// app/api/spotify/import/route.ts
 import { prisma } from "@/lib/prisma";
 import { spotifyFetch } from "@/lib/spotify";
-import { ReleaseType } from "@prisma/client";
+import { ReleaseType } from "@prisma/client"; // <-- import the enum
 export const runtime = "nodejs";
 
-/** Map Spotify album_type -> your Prisma enum */
+/** Map Spotify album_type -> your Prisma enum members. 
+ *  Adjust these to match exactly what's in prisma/schema.prisma.
+ *  Common cases:
+ *    enum ReleaseType { SINGLE ALBUM COMPILATION }   // UPPERCASE
+ *    or enum ReleaseType { single album compilation } // lowercase
+ */
 function toReleaseType(albumType?: string | null): ReleaseType {
   const t = (albumType || "").toLowerCase();
-  if (t === "album") return ReleaseType.ALBUM;
-  if (t === "ep") return ReleaseType.EP;
-  return ReleaseType.SINGLE; // default
+
+  // If your enum is UPPERCASE (most common):
+  if ((ReleaseType as any).SINGLE && (ReleaseType as any).ALBUM) {
+    if (t === "single") return (ReleaseType as any).SINGLE;
+    if (t === "album") return (ReleaseType as any).ALBUM;
+    if (t === "compilation" && (ReleaseType as any).COMPILATION)
+      return (ReleaseType as any).COMPILATION;
+    // fallback
+    return (ReleaseType as any).SINGLE;
+  }
+
+  // If your enum is lowercase members:
+  // @ts-ignore – allow dynamic enum member access
+  if (ReleaseType.single && ReleaseType.album) {
+    // @ts-ignore
+    if (t === "single") return ReleaseType.single;
+    // @ts-ignore
+    if (t === "album") return ReleaseType.album;
+    // @ts-ignore
+    if (t === "compilation" && ReleaseType.compilation) return ReleaseType.compilation;
+    // @ts-ignore
+    return ReleaseType.single;
+  }
+
+  // Last resort: assume "single"
+  return (Object.values(ReleaseType) as any)[0];
 }
 
 function normalize(item: any) {
   const t = item.track ?? item;
   if (!t || t.is_local) return null;
-
   const album = t.album;
   const artists = t.artists ?? [];
   const primaryArtist = artists[0];
 
   return {
     spotifyTrackId: t.id as string,
-    title: (t.name as string)?.trim(),
-    artistSpotifyId: (primaryArtist?.id as string) || null,
-    artistName: ((primaryArtist?.name as string) || "Unknown Artist").trim(),
+    title: t.name as string,
+    artistSpotifyId: primaryArtist?.id as string | undefined,
+    artistName: (primaryArtist?.name as string) || "Unknown Artist",
     albumType: (album?.album_type as string | undefined) || "single",
     releaseDate: (album?.release_date as string | undefined) || null,
     coverUrl: (album?.images?.[0]?.url as string | undefined) || null,
-    label: (album?.label as string | undefined) || null,
   };
-}
-
-/** Find or create an Artist without needing a unique name in the schema */
-async function getOrCreateArtist(artistSpotifyId: string | null, artistName: string) {
-  // 1) Prefer Spotify artist id if present (use it as our Artist.id going forward)
-  if (artistSpotifyId) {
-    const byId = await prisma.artist.findUnique({ where: { id: artistSpotifyId } });
-    if (byId) {
-      // keep name fresh
-      if (artistName && byId.name !== artistName) {
-        return prisma.artist.update({ where: { id: byId.id }, data: { name: artistName } });
-      }
-      return byId;
-    }
-    // 2) If not found by id, try by name to avoid duping an existing cuid record
-    const byName = await prisma.artist.findFirst({ where: { name: artistName } });
-    if (byName) return byName;
-
-    // 3) Create using Spotify id as our primary key (simple & stable)
-    return prisma.artist.create({
-      data: { id: artistSpotifyId, name: artistName, country: null },
-    });
-  }
-
-  // No Spotify artist id? Best effort: reuse by name, else create new cuid
-  const byName = await prisma.artist.findFirst({ where: { name: artistName } });
-  if (byName) return byName;
-
-  return prisma.artist.create({ data: { name: artistName, country: null } });
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { playlistId, dryRun = false, isMena = false } = body || {};
-    if (!playlistId) {
-      return Response.json({ ok: false, error: "Missing playlistId" }, { status: 400 });
-    }
+    const { playlistId, dryRun = false } = body || {};
+    if (!playlistId) return Response.json({ ok: false, error: "Missing playlistId" }, { status: 400 });
 
-    // Fetch playlist (includes tracks)
     const pl = await spotifyFetch(`/v1/playlists/${playlistId}?market=US`);
-    const items = (pl?.tracks?.items ?? [])
-      .map(normalize)
-      .filter(Boolean) as ReturnType<typeof normalize>[];
+    const items = (pl?.tracks?.items ?? []).map(normalize).filter(Boolean) as ReturnType<typeof normalize>[];
 
-    if (dryRun) {
-      return Response.json({ ok: true, previewCount: items.length, items });
-    }
+    if (dryRun) return Response.json({ ok: true, previewCount: items.length, items });
 
-    const results: Array<{ releaseId: string; title: string; artist: string }> = [];
-
+    const results: any[] = [];
     for (const it of items) {
-      // Ensure we have a Spotify track id; we key ONLY by this
-      if (!it.spotifyTrackId) continue;
-
-      // 1) Artist
-      const artist = await getOrCreateArtist(it.artistSpotifyId, it.artistName);
-
-      // 2) Prepare release data
-      const data = {
-        artistId: artist.id,
-        title: it.title,
-        type: toReleaseType(it.albumType), // enum
-        releaseDate: it.releaseDate ? new Date(it.releaseDate) : null,
-        label: it.label ?? null,
-        coverUrl: it.coverUrl ?? null,
-        isMena: Boolean(isMena),
-        spotifyTrackId: it.spotifyTrackId, // UNIQUE key we upsert on
-      };
-
-      // 3) Upsert strictly by spotifyTrackId (the only uniqueness we care about)
-      const release = await prisma.release.upsert({
-        where: { spotifyTrackId: it.spotifyTrackId },
-        update: {
-          // refresh metadata on re-import
-          title: data.title,
-          artistId: data.artistId,
-          type: data.type,
-          releaseDate: data.releaseDate ?? undefined,
-          label: data.label ?? undefined,
-          coverUrl: data.coverUrl ?? undefined,
-          isMena: data.isMena,
-        },
+      // 1) Upsert Artist
+      const artist = await prisma.artist.upsert({
+        where: { id: it!.artistSpotifyId || it!.artistName },
+        update: { name: it!.artistName },
         create: {
-          // id will be cuid() by default (per schema)
-          artistId: data.artistId,
-          title: data.title,
-          type: data.type,
-          releaseDate: data.releaseDate,
-          label: data.label,
-          coverUrl: data.coverUrl,
-          isMena: data.isMena,
-          spotifyTrackId: data.spotifyTrackId,
+          id: it!.artistSpotifyId || crypto.randomUUID(),
+          name: it!.artistName,
+          country: null,
         },
-        select: { id: true, title: true },
       });
 
-      // 4) Ensure a ReleaseScore row exists
+      // 2) Create/Update Release with proper enum
+      const existing = await prisma.release.findFirst({
+        where: { spotifyTrackId: it!.spotifyTrackId },
+        select: { id: true },
+      });
+
+      const data = {
+        artistId: artist.id,
+        title: it!.title,
+        type: toReleaseType(it!.albumType), // <-- enum, not string
+        releaseDate: it!.releaseDate ? new Date(it!.releaseDate) : null,
+        coverUrl: it!.coverUrl,
+        isMena: false,
+        spotifyTrackId: it!.spotifyTrackId,
+        label: null,
+      };
+
+      const release = existing
+        ? await prisma.release.update({ where: { id: existing.id }, data })
+        : await prisma.release.create({ data: { id: crypto.randomUUID(), ...data } });
+
       await prisma.releaseScore.upsert({
         where: { releaseId: release.id },
         update: { lastCalculated: new Date() },
