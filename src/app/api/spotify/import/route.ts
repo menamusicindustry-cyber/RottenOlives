@@ -1,7 +1,7 @@
 // src/app/api/spotify/import/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma";
-import { spotifyFetch } from "@/src/lib/spotify";
+import { prisma } from "@/lib/prisma";
+import { spotifyFetch } from "@/lib/spotify";
 
 type SpotifyArtist = {
   id: string;
